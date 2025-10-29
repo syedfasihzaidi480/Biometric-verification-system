@@ -1,0 +1,13 @@
+{
+  "typescript.tsdk": "apps/web/node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  
+  // Hide type errors from node_modules
+  "typescript.problemMatchers": [
+    "$tsc-watch"
+  ],
+  
+  // Optional: Filter out node_modules errors from Problems panel
+  "problems.sortOrder": "severity",
+  "problems.defaultViewMode": "tree"
+}

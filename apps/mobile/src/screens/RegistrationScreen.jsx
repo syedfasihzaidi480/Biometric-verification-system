@@ -1,0 +1,392 @@
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import {
+  ArrowLeft,
+  Calendar,
+  User,
+  Phone,
+  Mail,
+  Shield,
+} from "lucide-react-native";
+import { useTranslation } from "@/i18n/useTranslation";
+
+export default function RegistrationScreen() {
+  const insets = useSafeAreaInsets();
+  const { t, currentLanguage } = useTranslation();
+
+  const [formData, setFormData] = useState({
+    fullName: "",
+    dateOfBirth: "",
+    pensionNumber: "",
+    phoneNumber: "",
+  });
+
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Name validation
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = t("registration.nameRequired");
+    }
+
+    // Date validation (DD/MM/YYYY format)
+    if (!formData.dateOfBirth.trim()) {
+      newErrors.dateOfBirth = "Date of birth is required";
+    } else if (!/^\d{2}\/\d{2}\/\d{4}$/.test(formData.dateOfBirth.trim())) {
+      newErrors.dateOfBirth = "Please enter date in DD/MM/YYYY format";
+    }
+
+    // Pension number validation
+    if (!formData.pensionNumber.trim()) {
+      newErrors.pensionNumber = "Pension number is required";
+    }
+
+    // Phone validation
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = t("registration.phoneRequired");
+    } else if (!/^\+?[\d\s\-\(\)]{8,20}$/.test(formData.phoneNumber.trim())) {
+      newErrors.phoneNumber = t("registration.validPhone");
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Convert DD/MM/YYYY to YYYY-MM-DD for database
+      const [day, month, year] = formData.dateOfBirth.split("/");
+      const isoDate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.fullName.trim(),
+          phone: formData.phoneNumber.trim(),
+          date_of_birth: isoDate,
+          pension_number: formData.pensionNumber.trim(),
+          preferred_language: currentLanguage,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Store user data for next steps
+        router.push({
+          pathname: "/voice-enrollment",
+          params: {
+            userId: result.data.user.id,
+            userName: formData.fullName.trim(),
+            dateOfBirth: formData.dateOfBirth,
+          },
+        });
+      } else {
+        Alert.alert(
+          t("common.error"),
+          result.error?.message || t("errors.server"),
+        );
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+      Alert.alert(t("common.error"), t("errors.network"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateFormData = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <StatusBar style="dark" />
+
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={24} color="#333" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t("registration.title")}</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Form */}
+          <View style={styles.form}>
+            {/* Full Name */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>{t("registration.fullName")} *</Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  errors.fullName && styles.inputError,
+                ]}
+              >
+                <User size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  value={formData.fullName}
+                  onChangeText={(value) => updateFormData("fullName", value)}
+                  placeholder={t("registration.fullNamePlaceholder")}
+                  autoCapitalize="words"
+                  autoComplete="name"
+                />
+              </View>
+              {errors.fullName && (
+                <Text style={styles.errorText}>{errors.fullName}</Text>
+              )}
+            </View>
+
+            {/* Date of Birth */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                {t("registration.dateOfBirth")} *
+              </Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  errors.dateOfBirth && styles.inputError,
+                ]}
+              >
+                <Calendar size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  value={formData.dateOfBirth}
+                  onChangeText={(value) => updateFormData("dateOfBirth", value)}
+                  placeholder="DD/MM/YYYY"
+                  keyboardType="numeric"
+                />
+              </View>
+              {errors.dateOfBirth && (
+                <Text style={styles.errorText}>{errors.dateOfBirth}</Text>
+              )}
+            </View>
+
+            {/* Pension Number */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Pension Number *</Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  errors.pensionNumber && styles.inputError,
+                ]}
+              >
+                <Shield size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  value={formData.pensionNumber}
+                  onChangeText={(value) =>
+                    updateFormData("pensionNumber", value)
+                  }
+                  placeholder="Enter your pension number"
+                  autoCapitalize="characters"
+                />
+              </View>
+              {errors.pensionNumber && (
+                <Text style={styles.errorText}>{errors.pensionNumber}</Text>
+              )}
+            </View>
+
+            {/* Phone Number */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                {t("registration.phoneNumber")} (Include area code) *
+              </Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  errors.phoneNumber && styles.inputError,
+                ]}
+              >
+                <Phone size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  value={formData.phoneNumber}
+                  onChangeText={(value) => updateFormData("phoneNumber", value)}
+                  placeholder="+1 (555) 123-4567"
+                  keyboardType="phone-pad"
+                  autoComplete="tel"
+                />
+              </View>
+              {errors.phoneNumber && (
+                <Text style={styles.errorText}>{errors.phoneNumber}</Text>
+              )}
+            </View>
+
+            {/* Required fields note */}
+            <Text style={styles.requiredNote}>* Required fields</Text>
+          </View>
+        </ScrollView>
+
+        {/* Create Account Button */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[
+              styles.createButton,
+              isLoading && styles.createButtonDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={isLoading}
+          >
+            <Text style={styles.createButtonText}>
+              {isLoading
+                ? t("common.loading")
+                : t("registration.createAccount")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1F2937",
+    textAlign: "center",
+  },
+  headerSpacer: {
+    width: 32,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  form: {
+    paddingHorizontal: 24,
+    paddingTop: 24,
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#374151",
+    marginBottom: 8,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    backgroundColor: "#F9FAFB",
+  },
+  inputError: {
+    borderColor: "#EF4444",
+    backgroundColor: "#FEF2F2",
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    color: "#1F2937",
+  },
+  errorText: {
+    fontSize: 12,
+    color: "#EF4444",
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  requiredNote: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  terms: {
+    fontSize: 12,
+    color: "#6B7280",
+    lineHeight: 18,
+    textAlign: "center",
+  },
+  footer: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    paddingBottom: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+  },
+  createButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  createButtonDisabled: {
+    backgroundColor: "#9CA3AF",
+  },
+  createButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+});

@@ -1,0 +1,294 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+import nodeConsole from 'node:console';
+import { skipCSRFCheck } from '@auth/core';
+import Credentials from '@auth/core/providers/credentials';
+import { authHandler, initAuthConfig } from '@hono/auth-js';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { MongoClient } from 'mongodb';
+import { hash, verify } from 'argon2';
+import { Hono } from 'hono';
+import { contextStorage, getContext } from 'hono/context-storage';
+import { cors } from 'hono/cors';
+import { proxy } from 'hono/proxy';
+import { requestId } from 'hono/request-id';
+import { createHonoServer } from 'react-router-hono-server/node';
+import { serializeError } from 'serialize-error';
+import ws from 'ws';
+import NeonAdapter from './adapter';
+import { getHTMLForErrorPage } from './get-html-for-error-page';
+import { isAuthAction } from './is-auth-action';
+import { API_BASENAME, api } from './route-builder';
+neonConfig.webSocketConstructor = ws;
+
+const als = new AsyncLocalStorage<{ requestId: string }>();
+
+for (const method of ['log', 'info', 'warn', 'error', 'debug'] as const) {
+  const original = nodeConsole[method].bind(console);
+
+  console[method] = (...args: unknown[]) => {
+    const requestId = als.getStore()?.requestId;
+    if (requestId) {
+      original(`[traceId:${requestId}]`, ...args);
+    } else {
+      original(...args);
+    }
+  };
+}
+
+let adapter: any;
+if (process.env.MONGODB_URI) {
+  const mongoClient = new MongoClient(process.env.MONGODB_URI);
+  // Lazy connect; driver will connect on first operation
+  const db = mongoClient.db(process.env.MONGODB_DB || 'auth');
+  const MongoAdapter = (await import('./mongo-adapter')).default;
+  adapter = MongoAdapter(db);
+} else {
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+  });
+  adapter = NeonAdapter(pool);
+}
+
+const app = new Hono();
+
+app.use('*', requestId());
+
+app.use('*', (c, next) => {
+  const requestId = c.get('requestId');
+  return als.run({ requestId }, () => next());
+});
+
+app.use(contextStorage());
+
+app.onError((err, c) => {
+  if (c.req.method !== 'GET') {
+    return c.json(
+      {
+        error: 'An error occurred in your app',
+        details: serializeError(err),
+      },
+      500
+    );
+  }
+  return c.html(getHTMLForErrorPage(err), 200);
+});
+
+if (process.env.CORS_ORIGINS) {
+  app.use(
+    '/*',
+    cors({
+      origin: process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim()),
+    })
+  );
+}
+
+if (process.env.AUTH_SECRET) {
+  app.use(
+    '*',
+    initAuthConfig((c) => ({
+      secret: c.env.AUTH_SECRET,
+      trustHost: true,
+      pages: {
+        signIn: '/account/signin',
+        signOut: '/account/logout',
+      },
+      skipCSRFCheck,
+      session: {
+        strategy: 'jwt',
+      },
+      callbacks: {
+        session({ session, token }) {
+          if (token.sub) {
+            session.user.id = token.sub;
+          }
+          return session;
+        },
+      },
+      // In dev over HTTP, secure cookies won't be set. Toggle based on AUTH_URL.
+      cookies: {
+        csrfToken: {
+          options: {
+            secure: Boolean(process.env.AUTH_URL?.startsWith('https')),
+            sameSite: 'none',
+          },
+        },
+        sessionToken: {
+          options: {
+            secure: Boolean(process.env.AUTH_URL?.startsWith('https')),
+            sameSite: 'none',
+          },
+        },
+        callbackUrl: {
+          options: {
+            secure: Boolean(process.env.AUTH_URL?.startsWith('https')),
+            sameSite: 'none',
+          },
+        },
+      },
+      providers: [
+        Credentials({
+          id: 'credentials-signin',
+          name: 'Credentials Sign in',
+          credentials: {
+            email: {
+              label: 'Email',
+              type: 'email',
+            },
+            password: {
+              label: 'Password',
+              type: 'password',
+            },
+          },
+          authorize: async (credentials) => {
+            console.log('[SIGN-IN] Authorize called with email:', credentials?.email);
+            const { email, password } = credentials;
+            if (!email || !password) {
+              console.error('[SIGN-IN] Missing email or password');
+              return null;
+            }
+            if (typeof email !== 'string' || typeof password !== 'string') {
+              console.error('[SIGN-IN] Invalid credential types');
+              return null;
+            }
+
+            console.log('[SIGN-IN] Looking up user by email...');
+            // logic to verify if user exists
+            const user = await adapter.getUserByEmail(email);
+            if (!user) {
+              console.error('[SIGN-IN] User not found:', email);
+              return null;
+            }
+            console.log('[SIGN-IN] User found:', user.id);
+            const matchingAccount = (user as any).accounts.find(
+              (account: any) => account.provider === 'credentials'
+            );
+            const accountPassword = matchingAccount?.password;
+            if (!accountPassword) {
+              console.error('[SIGN-IN] No credentials account found for user');
+              return null;
+            }
+
+            console.log('[SIGN-IN] Verifying password...');
+            const isValid = await verify(accountPassword, password);
+            if (!isValid) {
+              console.error('[SIGN-IN] Invalid password');
+              return null;
+            }
+
+            console.log('[SIGN-IN] Authentication successful!');
+            // return user object with the their profile data
+            return user;
+          },
+        }),
+        Credentials({
+          id: 'credentials-signup',
+          name: 'Credentials Sign up',
+          credentials: {
+            email: {
+              label: 'Email',
+              type: 'email',
+            },
+            password: {
+              label: 'Password',
+              type: 'password',
+            },
+          },
+          authorize: async (credentials) => {
+            console.log('[SIGN-UP] Authorize called with email:', credentials?.email);
+            const { email, password } = credentials;
+            if (!email || !password) {
+              console.error('[SIGN-UP] Missing email or password');
+              return null;
+            }
+            if (typeof email !== 'string' || typeof password !== 'string') {
+              console.error('[SIGN-UP] Invalid credential types');
+              return null;
+            }
+
+            console.log('[SIGN-UP] Checking if user exists...');
+            // logic to verify if user exists
+            const user = await adapter.getUserByEmail(email);
+            if (!user) {
+              console.log('[SIGN-UP] Creating new auth user...');
+              const newUser = await adapter.createUser({
+                id: crypto.randomUUID(),
+                emailVerified: null,
+                email,
+              });
+              console.log('[SIGN-UP] Linking credentials account...');
+              await adapter.linkAccount({
+                extraData: {
+                  password: await hash(password),
+                },
+                type: 'credentials',
+                userId: newUser.id,
+                providerAccountId: newUser.id,
+                provider: 'credentials',
+              });
+              console.log('[SIGN-UP] User created successfully:', newUser.id);
+              return newUser;
+            }
+            console.error('[SIGN-UP] User already exists with this email');
+            return null;
+          },
+        }),
+      ],
+    }))
+  );
+}
+app.all('/integrations/:path{.+}', async (c, next) => {
+  const queryParams = c.req.query();
+  const url = `${process.env.NEXT_PUBLIC_CREATE_BASE_URL ?? 'https://www.create.xyz'}/integrations/${c.req.param('path')}${Object.keys(queryParams).length > 0 ? `?${new URLSearchParams(queryParams).toString()}` : ''}`;
+
+  return proxy(url, {
+    method: c.req.method,
+    body: c.req.raw.body ?? null,
+    // @ts-ignore - this key is accepted even if types not aware and is
+    // required for streaming integrations
+    duplex: 'half',
+    redirect: 'manual',
+    headers: {
+      ...c.req.header(),
+      'X-Forwarded-For': process.env.NEXT_PUBLIC_CREATE_HOST,
+      'x-createxyz-host': process.env.NEXT_PUBLIC_CREATE_HOST,
+      Host: process.env.NEXT_PUBLIC_CREATE_HOST,
+      'x-createxyz-project-group-id': process.env.NEXT_PUBLIC_PROJECT_GROUP_ID,
+    },
+  });
+});
+
+// ========================================
+// CRITICAL: API routes MUST be handled before React Router!
+// ========================================
+
+// First, register custom API routes (includes /api/auth/register)
+app.route(API_BASENAME, api);
+
+// Then, handle Auth.js endpoints (signin, signout, callback, session, etc.)
+app.use('/api/auth/*', async (c, next) => {
+  const path = c.req.path;
+  console.log('[AUTH MIDDLEWARE] Checking path:', path);
+  
+  if (isAuthAction(path)) {
+    console.log('[AUTH MIDDLEWARE] Handling as auth action');
+    return authHandler()(c, next);
+  }
+  
+  console.log('[AUTH MIDDLEWARE] Skipping, not an auth action');
+  return next();
+});
+
+// Catch-all: if a request reaches here and starts with /api, 
+// it means no handler was found - return 404
+app.all('/api/*', (c) => {
+  console.log('[API 404] No handler found for:', c.req.path);
+  return c.json({ error: 'API endpoint not found' }, 404);
+});
+
+// Create React Router server (handles everything else)
+const server = await createHonoServer({
+  app,
+  defaultLogger: false,
+});
+
+export default server;
