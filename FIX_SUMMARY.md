@@ -1,6 +1,26 @@
-# Registration Bug Fix Summary
+# Authentication Fix - Complete Summary
 
-## Problem
+## Latest Fix: Corrected Auth.js Endpoint (FINAL)
+
+### Issue
+Getting error: `UnknownAction: Cannot parse action at /api/auth/callback/credentials`
+
+### Root Cause
+Using wrong Auth.js endpoint. The credentials provider uses:
+- ✅ **CORRECT**: `/api/auth/signin/credentials`
+- ❌ **WRONG**: `/api/auth/callback/credentials` (only for OAuth)
+
+### Files Fixed
+1. `apps/web/src/utils/useAuth.js` - Changed fetch URL to `/api/auth/signin/credentials`
+2. `apps/web/scripts/test-signin.js` - Updated test script endpoint
+3. `apps/web/test-signin.js` - Updated alternate test script endpoint
+4. `AUTH_FIX_SUMMARY.md` - Updated documentation
+
+---
+
+## Previous Fixes
+
+### Fix #1: Registration Route Not Found
 Account registration was failing with a 404 error:
 ```
 [AUTH MIDDLEWARE] Checking path: /api/auth/register

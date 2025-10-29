@@ -5,7 +5,7 @@ import Credentials from '@auth/core/providers/credentials';
 import { authHandler, initAuthConfig } from '@hono/auth-js';
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { MongoClient } from 'mongodb';
-import { hash, verify } from 'argon2';
+import { verify } from 'argon2';
 import { Hono } from 'hono';
 import { contextStorage, getContext } from 'hono/context-storage';
 import { cors } from 'hono/cors';
@@ -18,6 +18,7 @@ import NeonAdapter from './adapter';
 import { getHTMLForErrorPage } from './get-html-for-error-page';
 import { isAuthAction } from './is-auth-action';
 import { API_BASENAME, api } from './route-builder';
+
 neonConfig.webSocketConstructor = ws;
 
 const als = new AsyncLocalStorage<{ requestId: string }>();
@@ -82,160 +83,89 @@ if (process.env.CORS_ORIGINS) {
   );
 }
 
-if (process.env.AUTH_SECRET) {
-  app.use(
-    '*',
-    initAuthConfig((c) => ({
-      secret: c.env.AUTH_SECRET,
-      trustHost: true,
-      pages: {
-        signIn: '/account/signin',
-        signOut: '/account/logout',
+// Initialize Auth.js configuration with explicit basePath and dev fallback secret
+app.use(
+  '*',
+  initAuthConfig(() => ({
+    secret: process.env.AUTH_SECRET || 'dev-fallback-secret-change-me',
+    basePath: '/api/auth',
+    trustHost: true,
+    pages: {
+      signIn: '/account/signin',
+      signOut: '/account/logout',
+    },
+    skipCSRFCheck,
+    session: { strategy: 'jwt' },
+    callbacks: {
+      session({ session, token }) {
+        if (token?.sub) {
+          // @ts-ignore
+          session.user.id = token.sub;
+        }
+        return session;
       },
-      skipCSRFCheck,
-      session: {
-        strategy: 'jwt',
-      },
-      callbacks: {
-        session({ session, token }) {
-          if (token.sub) {
-            session.user.id = token.sub;
-          }
-          return session;
+    },
+    cookies: {
+      csrfToken: {
+        options: {
+          secure: Boolean(process.env.AUTH_URL?.startsWith('https')),
+          sameSite: Boolean(process.env.AUTH_URL?.startsWith('https')) ? 'none' : 'lax',
         },
       },
-      // In dev over HTTP, secure cookies won't be set. Toggle based on AUTH_URL.
-      cookies: {
-        csrfToken: {
-          options: {
-            secure: Boolean(process.env.AUTH_URL?.startsWith('https')),
-            sameSite: 'none',
-          },
-        },
-        sessionToken: {
-          options: {
-            secure: Boolean(process.env.AUTH_URL?.startsWith('https')),
-            sameSite: 'none',
-          },
-        },
-        callbackUrl: {
-          options: {
-            secure: Boolean(process.env.AUTH_URL?.startsWith('https')),
-            sameSite: 'none',
-          },
+      sessionToken: {
+        options: {
+          secure: Boolean(process.env.AUTH_URL?.startsWith('https')),
+          sameSite: Boolean(process.env.AUTH_URL?.startsWith('https')) ? 'none' : 'lax',
         },
       },
-      providers: [
-        Credentials({
-          id: 'credentials-signin',
-          name: 'Credentials Sign in',
-          credentials: {
-            email: {
-              label: 'Email',
-              type: 'email',
-            },
-            password: {
-              label: 'Password',
-              type: 'password',
-            },
-          },
-          authorize: async (credentials) => {
-            console.log('[SIGN-IN] Authorize called with email:', credentials?.email);
-            const { email, password } = credentials;
-            if (!email || !password) {
-              console.error('[SIGN-IN] Missing email or password');
-              return null;
-            }
-            if (typeof email !== 'string' || typeof password !== 'string') {
-              console.error('[SIGN-IN] Invalid credential types');
-              return null;
-            }
-
-            console.log('[SIGN-IN] Looking up user by email...');
-            // logic to verify if user exists
-            const user = await adapter.getUserByEmail(email);
-            if (!user) {
-              console.error('[SIGN-IN] User not found:', email);
-              return null;
-            }
-            console.log('[SIGN-IN] User found:', user.id);
-            const matchingAccount = (user as any).accounts.find(
-              (account: any) => account.provider === 'credentials'
-            );
-            const accountPassword = matchingAccount?.password;
-            if (!accountPassword) {
-              console.error('[SIGN-IN] No credentials account found for user');
-              return null;
-            }
-
-            console.log('[SIGN-IN] Verifying password...');
-            const isValid = await verify(accountPassword, password);
-            if (!isValid) {
-              console.error('[SIGN-IN] Invalid password');
-              return null;
-            }
-
-            console.log('[SIGN-IN] Authentication successful!');
-            // return user object with the their profile data
-            return user;
-          },
-        }),
-        Credentials({
-          id: 'credentials-signup',
-          name: 'Credentials Sign up',
-          credentials: {
-            email: {
-              label: 'Email',
-              type: 'email',
-            },
-            password: {
-              label: 'Password',
-              type: 'password',
-            },
-          },
-          authorize: async (credentials) => {
-            console.log('[SIGN-UP] Authorize called with email:', credentials?.email);
-            const { email, password } = credentials;
-            if (!email || !password) {
-              console.error('[SIGN-UP] Missing email or password');
-              return null;
-            }
-            if (typeof email !== 'string' || typeof password !== 'string') {
-              console.error('[SIGN-UP] Invalid credential types');
-              return null;
-            }
-
-            console.log('[SIGN-UP] Checking if user exists...');
-            // logic to verify if user exists
-            const user = await adapter.getUserByEmail(email);
-            if (!user) {
-              console.log('[SIGN-UP] Creating new auth user...');
-              const newUser = await adapter.createUser({
-                id: crypto.randomUUID(),
-                emailVerified: null,
-                email,
-              });
-              console.log('[SIGN-UP] Linking credentials account...');
-              await adapter.linkAccount({
-                extraData: {
-                  password: await hash(password),
-                },
-                type: 'credentials',
-                userId: newUser.id,
-                providerAccountId: newUser.id,
-                provider: 'credentials',
-              });
-              console.log('[SIGN-UP] User created successfully:', newUser.id);
-              return newUser;
-            }
-            console.error('[SIGN-UP] User already exists with this email');
+      callbackUrl: {
+        options: {
+          secure: Boolean(process.env.AUTH_URL?.startsWith('https')),
+          sameSite: Boolean(process.env.AUTH_URL?.startsWith('https')) ? 'none' : 'lax',
+        },
+      },
+    },
+    providers: [
+      Credentials({
+        id: 'credentials',
+        name: 'Credentials Sign in',
+        credentials: {
+          email: { label: 'Email', type: 'email' },
+          password: { label: 'Password', type: 'password' },
+        },
+        authorize: async (credentials) => {
+          console.log('[SIGN-IN] Authorize called with email:', credentials?.email);
+          const { email, password } = (credentials ?? {}) as { email?: string; password?: string };
+          if (!email || !password) {
+            console.error('[SIGN-IN] Missing email or password');
             return null;
-          },
-        }),
-      ],
-    }))
-  );
-}
+          }
+          console.log('[SIGN-IN] Looking up user by email...');
+          const user = await adapter.getUserByEmail(email);
+          if (!user) {
+            console.error('[SIGN-IN] User not found:', email);
+            return null;
+          }
+          console.log('[SIGN-IN] User found:', user.id);
+          const matchingAccount = (user as any).accounts?.find((a: any) => a.provider === 'credentials');
+          const accountPassword = matchingAccount?.password;
+          if (!accountPassword) {
+            console.error('[SIGN-IN] No credentials account found for user');
+            return null;
+          }
+          console.log('[SIGN-IN] Verifying password...');
+          const isValid = await verify(accountPassword, password);
+          if (!isValid) {
+            console.error('[SIGN-IN] Invalid password');
+            return null;
+          }
+          console.log('[SIGN-IN] Authentication successful!');
+          return user;
+        },
+      }),
+    ],
+  }))
+);
 app.all('/integrations/:path{.+}', async (c, next) => {
   const queryParams = c.req.query();
   const url = `${process.env.NEXT_PUBLIC_CREATE_BASE_URL ?? 'https://www.create.xyz'}/integrations/${c.req.param('path')}${Object.keys(queryParams).length > 0 ? `?${new URLSearchParams(queryParams).toString()}` : ''}`;
@@ -261,13 +191,15 @@ app.all('/integrations/:path{.+}', async (c, next) => {
 // CRITICAL: API routes MUST be handled before React Router!
 // ========================================
 
-// First, register custom API routes (includes /api/auth/register)
-app.route(API_BASENAME, api);
-
-// Then, handle Auth.js endpoints (signin, signout, callback, session, etc.)
+// First, handle Auth.js endpoints (signin, signout, callback, session, etc.)
+// This MUST come before registering the generic /api routes, otherwise
+// the nested /api router will swallow /api/auth/* and Auth.js won't run.
 app.use('/api/auth/*', async (c, next) => {
   const path = c.req.path;
-  console.log('[AUTH MIDDLEWARE] Checking path:', path);
+  const method = c.req.method;
+  const stripped = path.replace(/^\/api\/auth\/?/, '');
+  const segments = stripped.split('/').filter(Boolean);
+  console.log('[AUTH MIDDLEWARE] Checking path:', path, 'method:', method, 'segments:', segments);
   
   if (isAuthAction(path)) {
     console.log('[AUTH MIDDLEWARE] Handling as auth action');
@@ -277,6 +209,9 @@ app.use('/api/auth/*', async (c, next) => {
   console.log('[AUTH MIDDLEWARE] Skipping, not an auth action');
   return next();
 });
+
+// Then, register custom API routes (includes /api/auth/register)
+app.route(API_BASENAME, api);
 
 // Catch-all: if a request reaches here and starts with /api, 
 // it means no handler was found - return 404

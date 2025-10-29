@@ -1,5 +1,6 @@
 import sql from "@/app/api/utils/sql";
 import { MongoClient } from "mongodb";
+import { hash } from "argon2";
 
 let mongoClient;
 async function getMongoDb() {
@@ -15,8 +16,8 @@ async function getMongoDb() {
  * User registration endpoint
  * POST /api/auth/register
  *
- * Required: name, phone
- * Optional: email, date_of_birth, preferred_language
+ * Required: name, phone, pension_number, email (for auth), password (for auth)
+ * Optional: date_of_birth, preferred_language
  */
 export async function POST(request) {
   try {
@@ -24,29 +25,32 @@ export async function POST(request) {
     const body = await request.json();
     console.log('[REGISTER] Request body:', { ...body, password: body.password ? '***' : undefined });
 
-    // Validate required fields - phone and pension_number are required, email is optional
+    // Validate required fields - phone, pension_number, email, and password are required
     const {
       name,
       phone,
       email,
+      password,
       date_of_birth,
       pension_number,
       preferred_language = "en",
     } = body;
 
-    if (!name || !phone || !pension_number) {
+    if (!name || !phone || !pension_number || !email || !password) {
       return Response.json(
         {
           success: false,
           error: {
             code: "MISSING_REQUIRED_FIELDS",
-            message: "Name, phone number, and pension number are required",
+            message: "Name, phone number, pension number, email, and password are required",
             details: {
               name: !name ? "Name is required" : null,
               phone: !phone ? "Phone number is required" : null,
               pension_number: !pension_number
                 ? "Pension number is required"
                 : null,
+              email: !email ? "Email is required for authentication" : null,
+              password: !password ? "Password is required for authentication" : null,
             },
           },
         },
@@ -88,6 +92,21 @@ export async function POST(request) {
       }
     }
 
+    // Password validation
+    if (password && password.length < 6) {
+      return Response.json(
+        {
+          success: false,
+          error: {
+            code: "WEAK_PASSWORD",
+            message: "Password must be at least 6 characters long",
+            details: { password: "Password too weak" },
+          },
+        },
+        { status: 400 },
+      );
+    }
+
     // Validate preferred language
     const validLanguages = ["en", "fr", "so", "am", "om"];
     if (!validLanguages.includes(preferred_language)) {
@@ -110,6 +129,8 @@ export async function POST(request) {
     if (db) {
       console.log('[REGISTER] Using MongoDB for registration');
       const users = db.collection("users");
+      const authUsers = db.collection("auth_users");
+      const authAccounts = db.collection("auth_accounts");
       const voiceProfiles = db.collection("voice_profiles");
       const auditLogs = db.collection("audit_logs");
 
@@ -143,7 +164,7 @@ export async function POST(request) {
       // Email duplicate check if provided
       if (email) {
         console.log('[REGISTER] Checking email duplication...');
-        const existingEmail = await users.findOne({ email });
+        const existingEmail = await authUsers.findOne({ email });
         if (existingEmail) {
           console.warn('[REGISTER] Email already exists');
           return Response.json(
@@ -161,8 +182,9 @@ export async function POST(request) {
       }
 
       console.log('[REGISTER] Creating user document...');
-      const doc = {
-        id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()),
+      const userId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+      const userDoc = {
+        id: userId,
         name,
         phone,
         email: email || null,
@@ -171,15 +193,48 @@ export async function POST(request) {
         preferred_language,
         created_at: new Date().toISOString(),
       };
-      await users.insertOne(doc);
-      console.log('[REGISTER] User created:', doc.id);
+      await users.insertOne(userDoc);
+      console.log('[REGISTER] User created:', userDoc.id);
+
+      // Create auth_users entry for authentication
+      console.log('[REGISTER] Creating auth user...');
+      const authUserId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+      const authUserDoc = {
+        id: authUserId,
+        email: email,
+        emailVerified: null,
+        name: name,
+        image: null,
+      };
+      await authUsers.insertOne(authUserDoc);
+      console.log('[REGISTER] Auth user created:', authUserId);
+
+      // Create auth_accounts entry with hashed password
+      console.log('[REGISTER] Creating auth account with credentials...');
+      const hashedPassword = await hash(password);
+      const authAccountDoc = {
+        userId: authUserId,
+        provider: 'credentials',
+        type: 'credentials',
+        providerAccountId: authUserId,
+        access_token: null,
+        expires_at: null,
+        refresh_token: null,
+        id_token: null,
+        scope: null,
+        session_state: null,
+        token_type: null,
+        password: hashedPassword,
+      };
+      await authAccounts.insertOne(authAccountDoc);
+      console.log('[REGISTER] Auth account created');
 
       console.log('[REGISTER] Creating voice profile...');
-      await voiceProfiles.insertOne({ user_id: doc.id });
+      await voiceProfiles.insertOne({ user_id: userDoc.id });
 
       console.log('[REGISTER] Logging audit event...');
       await auditLogs.insertOne({
-        user_id: doc.id,
+        user_id: userDoc.id,
         action: 'USER_REGISTERED',
         details: { phone, email, pension_number, preferred_language },
         ip_address:
@@ -195,14 +250,15 @@ export async function POST(request) {
           success: true,
           data: {
             user: {
-              id: doc.id,
-              name: doc.name,
-              phone: doc.phone,
-              email: doc.email,
-              pension_number: doc.pension_number,
-              preferred_language: doc.preferred_language,
-              created_at: doc.created_at,
+              id: userDoc.id,
+              name: userDoc.name,
+              phone: userDoc.phone,
+              email: userDoc.email,
+              pension_number: userDoc.pension_number,
+              preferred_language: userDoc.preferred_language,
+              created_at: userDoc.created_at,
             },
+            auth_user_id: authUserId,
             next_step: "voice_enrollment",
           },
         },
@@ -211,6 +267,8 @@ export async function POST(request) {
     }
 
     // Fallback: Postgres via Neon if configured
+    console.log('[REGISTER] Using Postgres/Neon for registration');
+    
     // Check if user already exists (by phone or pension number)
     const existingUser = await sql`
       SELECT id, phone, pension_number FROM users 
@@ -247,7 +305,7 @@ export async function POST(request) {
     // Check if email already exists (if provided)
     if (email) {
       const existingEmail = await sql`
-        SELECT id, email FROM users WHERE email = ${email}
+        SELECT id, email FROM auth_users WHERE email = ${email}
       `;
 
       if (existingEmail.length > 0) {
@@ -274,6 +332,34 @@ export async function POST(request) {
 
     const user = newUser[0];
 
+    // Create auth_users entry
+    console.log('[REGISTER] Creating auth user in Postgres...');
+    const newAuthUser = await sql`
+      INSERT INTO auth_users (name, email, "emailVerified", image)
+      VALUES (${name}, ${email}, NULL, NULL)
+      RETURNING id
+    `;
+    const authUserId = newAuthUser[0].id;
+    console.log('[REGISTER] Auth user created:', authUserId);
+
+    // Create auth_accounts entry with hashed password
+    console.log('[REGISTER] Creating auth account with credentials...');
+    const hashedPassword = await hash(password);
+    await sql`
+      INSERT INTO auth_accounts 
+      ("userId", provider, type, "providerAccountId", access_token, expires_at, 
+       refresh_token, id_token, scope, session_state, token_type, password)
+      VALUES (
+        ${authUserId}, 
+        'credentials', 
+        'credentials', 
+        ${authUserId},
+        NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+        ${hashedPassword}
+      )
+    `;
+    console.log('[REGISTER] Auth account created');
+
     // Create voice profile for the user
     await sql`
       INSERT INTO voice_profiles (user_id)
@@ -291,6 +377,7 @@ export async function POST(request) {
       )
     `;
 
+    console.log('[REGISTER] Registration completed successfully');
     return Response.json(
       {
         success: true,
@@ -304,6 +391,7 @@ export async function POST(request) {
             preferred_language: user.preferred_language,
             created_at: user.created_at,
           },
+          auth_user_id: authUserId,
           next_step: "voice_enrollment",
         },
       },

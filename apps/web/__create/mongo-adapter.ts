@@ -35,7 +35,7 @@ export default function MongoAdapter(db: Db) {
       const user = (await users.findOne({ email })) as MongoUser | null;
       if (!user) return null;
       const accs = await accounts
-        .find({ providerAccountId: user.id })
+        .find({ userId: user.id })
         .project({ _id: 0 })
         .toArray();
       return { ...user, accounts: accs } as MongoUser;

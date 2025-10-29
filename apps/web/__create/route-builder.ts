@@ -11,7 +11,8 @@ const api = new Hono();
 // Get current directory
 const __dirname = join(fileURLToPath(new URL('.', import.meta.url)), '../src/app/api');
 if (globalThis.fetch) {
-  globalThis.fetch = updatedFetch;
+  // @ts-ignore - Override global fetch for compatibility
+  globalThis.fetch = updatedFetch as typeof globalThis.fetch;
 }
 
 // Recursively find all route.js files

@@ -51,7 +51,7 @@ export default function SignUpPage() {
     return null;
   };
 
-  const { signUpWithCredentials } = useAuth();
+  const { signInWithCredentials } = useAuth();
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -70,6 +70,7 @@ export default function SignUpPage() {
       const [day, month, year] = formData.dateOfBirth.split("/");
       const isoDate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 
+      // Register the user - this now creates both profile AND auth credentials
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
@@ -78,7 +79,8 @@ export default function SignUpPage() {
         body: JSON.stringify({
           name: formData.fullName.trim(),
           phone: formData.phoneNumber.trim(),
-          email: formData.email.trim() || undefined,
+          email: formData.email.trim(),
+          password: formData.password.trim(),
           date_of_birth: isoDate,
           pension_number: formData.pensionNumber.trim(),
           preferred_language: "en",
@@ -95,20 +97,23 @@ export default function SignUpPage() {
         return;
       }
 
-      // Create credentials for web sign-in
+      // Now sign in with the credentials that were just created
+      console.log('[SIGNUP] Registration successful, signing in...');
       try {
-        await signUpWithCredentials({
+        await signInWithCredentials({
           email: formData.email.trim(),
           password: formData.password.trim(),
           redirect: true,
           callbackUrl: "/",
         });
       } catch (e) {
-        setError("Created profile, but failed to create login. Try signing in.");
+        console.error('[SIGNUP] Sign-in after registration failed:', e);
+        setError("Account created successfully! Please sign in.");
+        setLoading(false);
       }
     } catch (err) {
+      console.error('[SIGNUP] Registration error:', err);
       setError("Something went wrong. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
@@ -196,7 +201,7 @@ export default function SignUpPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email (Optional)
+                Email *
               </label>
               <input
                 type="email"
@@ -209,7 +214,7 @@ export default function SignUpPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password
+                Password *
               </label>
               <input
                 type="password"

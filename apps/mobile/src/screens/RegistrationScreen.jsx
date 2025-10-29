@@ -20,6 +20,7 @@ import {
   Phone,
   Mail,
   Shield,
+  Lock,
 } from "lucide-react-native";
 import { useTranslation } from "@/i18n/useTranslation";
 
@@ -32,6 +33,8 @@ export default function RegistrationScreen() {
     dateOfBirth: "",
     pensionNumber: "",
     phoneNumber: "",
+    email: "",
+    password: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -64,6 +67,20 @@ export default function RegistrationScreen() {
       newErrors.phoneNumber = t("registration.validPhone");
     }
 
+    // Email validation
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      newErrors.email = "Please enter a valid email address";
+    }
+
+    // Password validation
+    if (!formData.password.trim()) {
+      newErrors.password = "Password is required";
+    } else if (formData.password.trim().length < 6) {
+      newErrors.password = "Password must be at least 6 characters";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -88,6 +105,8 @@ export default function RegistrationScreen() {
         body: JSON.stringify({
           name: formData.fullName.trim(),
           phone: formData.phoneNumber.trim(),
+          email: formData.email.trim(),
+          password: formData.password.trim(),
           date_of_birth: isoDate,
           pension_number: formData.pensionNumber.trim(),
           preferred_language: currentLanguage,
@@ -253,6 +272,56 @@ export default function RegistrationScreen() {
               </View>
               {errors.phoneNumber && (
                 <Text style={styles.errorText}>{errors.phoneNumber}</Text>
+              )}
+            </View>
+
+            {/* Email */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email *</Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  errors.email && styles.inputError,
+                ]}
+              >
+                <Mail size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  value={formData.email}
+                  onChangeText={(value) => updateFormData("email", value)}
+                  placeholder="your.email@example.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                />
+              </View>
+              {errors.email && (
+                <Text style={styles.errorText}>{errors.email}</Text>
+              )}
+            </View>
+
+            {/* Password */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password *</Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  errors.password && styles.inputError,
+                ]}
+              >
+                <Lock size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  value={formData.password}
+                  onChangeText={(value) => updateFormData("password", value)}
+                  placeholder="Create a password"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="password"
+                />
+              </View>
+              {errors.password && (
+                <Text style={styles.errorText}>{errors.password}</Text>
               )}
             </View>
 

@@ -22,7 +22,7 @@ function useAuth() {
     formData.append('password', password);
     formData.append('callbackUrl', finalCallbackUrl);
     
-    const res = await fetch('/api/auth/callback/credentials-signin', {
+    const res = await fetch('/api/auth/callback/credentials', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -41,44 +41,6 @@ function useAuth() {
 
     if (redirect) {
       // Auth.js returns redirect URL or we use fallback
-      const redirectUrl = res.redirected ? res.url : finalCallbackUrl;
-      window.location.href = redirectUrl;
-    }
-
-    return res;
-  }, [callbackUrl]);
-
-  const signUpWithCredentials = useCallback(async (options) => {
-    const { email, password, redirect = true, callbackUrl: optionsCallbackUrl } = options;
-    
-    const finalCallbackUrl = optionsCallbackUrl || callbackUrl || '/';
-    
-    console.log('[CLIENT] Sign-up attempt:', { email });
-    
-    // Call Auth.js callback endpoint (POST form data)
-    const formData = new URLSearchParams();
-    formData.append('email', email);
-    formData.append('password', password);
-    formData.append('callbackUrl', finalCallbackUrl);
-    
-    const res = await fetch('/api/auth/callback/credentials-signup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData.toString(),
-      credentials: 'include',
-    });
-
-    console.log('[CLIENT] Sign-up response:', res.status);
-
-    if (!res.ok) {
-      const text = await res.text();
-      console.error('[CLIENT] Sign-up failed:', text);
-      throw new Error('CredentialsSignin');
-    }
-
-    if (redirect) {
       const redirectUrl = res.redirected ? res.url : finalCallbackUrl;
       window.location.href = redirectUrl;
     }
@@ -108,7 +70,6 @@ function useAuth() {
 
   return {
     signInWithCredentials,
-    signUpWithCredentials,
     signOut,
   };
 }
