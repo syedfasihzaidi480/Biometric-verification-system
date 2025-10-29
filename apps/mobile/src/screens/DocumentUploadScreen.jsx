@@ -14,6 +14,7 @@ import { router } from 'expo-router';
 import { ArrowLeft, Camera, ImageIcon, CheckCircle, Upload, RotateCw } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from '@/i18n/useTranslation';
+import { apiFetch } from '@/utils/api';
 
 export default function DocumentUploadScreen() {
   const insets = useSafeAreaInsets();
@@ -100,12 +101,9 @@ export default function DocumentUploadScreen() {
       formData.append('documentType', selectedDocumentType);
       formData.append('userId', '1'); // Should come from user context
 
-      const response = await fetch('/api/document/upload', {
+      const response = await apiFetch('/api/document/upload', {
         method: 'POST',
         body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
       });
 
       const result = await response.json();

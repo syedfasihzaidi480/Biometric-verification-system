@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/utils/auth/useAuth';
 import useUser from '@/utils/auth/useUser';
+import { apiFetchJson } from '@/utils/api';
 import { 
   CheckCircle, 
   Clock, 
@@ -42,9 +43,8 @@ export default function ProfileScreen() {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch('/api/profile');
-      const result = await response.json();
-      if (result.success) {
+      const result = await apiFetchJson('/api/profile');
+      if (result?.success) {
         setProfile(result.user);
       }
     } catch (error) {
@@ -128,8 +128,7 @@ export default function ProfileScreen() {
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Profile</Text>
-        <Text style={styles.headerSubtitle}>Account information and verification status</Text>
+        <Text style={styles.headerTitle}>Profile</Text>
       </View>
 
       <ScrollView
@@ -137,32 +136,28 @@ export default function ProfileScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* User Info Section */}
-        <View style={styles.section}>
-          <View style={styles.userInfoHeader}>
-            <View style={styles.avatarContainer}>
-              <User size={32} color="#3B82F6" />
-            </View>
-            <View style={styles.userDetails}>
-              <Text style={styles.userName}>{profile?.name || authUser?.name || 'User'}</Text>
-              <Text style={styles.userEmail}>{profile?.email || authUser?.email}</Text>
-              
-              {/* Status Badge */}
-              <View style={styles.statusContainer}>
-                {profile?.admin_approved ? (
-                  <View style={styles.approvedBadge}>
-                    <CheckCircle size={14} color="#10B981" />
-                    <Text style={styles.approvedText}>Verified Account</Text>
-                  </View>
-                ) : (
-                  <View style={styles.pendingBadge}>
-                    <Clock size={14} color="#F59E0B" />
-                    <Text style={styles.pendingText}>Pending Verification</Text>
-                  </View>
-                )}
-              </View>
-            </View>
+        {/* User Info Card */}
+        <View style={styles.userCard}>
+          <View style={styles.avatarLarge}>
+            <Text style={styles.avatarInitial}>
+              {(profile?.name || authUser?.name || 'U').charAt(0).toUpperCase()}
+            </Text>
           </View>
+          <Text style={styles.userName}>{profile?.name || authUser?.name || 'User'}</Text>
+          <Text style={styles.userEmail}>{profile?.email || authUser?.email}</Text>
+          
+          {/* Status Badge */}
+          {profile?.admin_approved ? (
+            <View style={styles.approvedBadge}>
+              <CheckCircle size={16} color="#10B981" />
+              <Text style={styles.approvedText}>Verified Account</Text>
+            </View>
+          ) : (
+            <View style={styles.pendingBadge}>
+              <Clock size={16} color="#F59E0B" />
+              <Text style={styles.pendingText}>Pending Verification</Text>
+            </View>
+          )}
         </View>
 
         {/* Account Information */}
@@ -319,7 +314,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F5F5F5',
   },
   centerContent: {
     flex: 1,
@@ -329,20 +324,13 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingVertical: 20,
+    backgroundColor: '#F5F5F5',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
   },
   title: {
     fontSize: 24,
@@ -373,51 +361,50 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 16,
+    marginBottom: 12,
+    paddingLeft: 4,
   },
-  userInfoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  userCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 20,
+    alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#EFF6FF',
+  avatarLarge: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginBottom: 16,
   },
-  userDetails: {
-    flex: 1,
+  avatarInitial: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   userName: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 4,
+    marginBottom: 6,
+    textAlign: 'center',
   },
   userEmail: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#6B7280',
-    marginBottom: 8,
-  },
-  statusContainer: {
-    alignSelf: 'flex-start',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   approvedBadge: {
     flexDirection: 'row',
@@ -449,29 +436,27 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 0,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
   infoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F3F4F6',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -480,74 +465,70 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
-    marginBottom: 2,
+    marginBottom: 4,
+    fontWeight: '500',
   },
   infoValue: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#1F2937',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   verificationCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 0,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   verificationItem: {
-    paddingVertical: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
   },
   verificationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   verificationLabel: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#1F2937',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   verificationStatus: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
   verificationSeparator: {
     height: 1,
     backgroundColor: '#F3F4F6',
-    marginHorizontal: -16,
   },
   adminCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 0,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   adminItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
   },
   adminIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F3F4F6',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -556,53 +537,47 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   adminLabel: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#1F2937',
-    fontWeight: '500',
-    marginBottom: 2,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   adminStatus: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
   adminSeparator: {
     height: 1,
     backgroundColor: '#F3F4F6',
-    marginHorizontal: -16,
   },
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#DC2626',
     paddingVertical: 16,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   signOutText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#DC2626',
+    fontWeight: '700',
+    color: '#FFFFFF',
     marginLeft: 8,
   },
   primaryButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#007AFF',
     paddingHorizontal: 32,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

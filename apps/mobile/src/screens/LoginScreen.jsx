@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { ArrowLeft, Phone, Shield, User } from "lucide-react-native";
 import { useTranslation } from "@/i18n/useTranslation";
+import { apiFetchJson } from "@/utils/api";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -63,15 +64,13 @@ export default function LoginScreen() {
         ? { phone: formData.loginField.trim() }
         : { pension_number: formData.loginField.trim() };
 
-      const response = await fetch("/api/auth/login", {
+      const result = await apiFetchJson("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(loginData),
+        body: loginData,
       });
-
-      const result = await response.json();
 
       if (result.success) {
         // User found, proceed to voice verification

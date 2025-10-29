@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { UploadClient } from '@uploadcare/upload-client'
+import { apiFetch, apiFetchJson } from '@/utils/api';
 const client = new UploadClient({ publicKey: process.env.EXPO_PUBLIC_UPLOADCARE_PUBLIC_KEY });
 
 function useUpload() {
@@ -16,16 +17,16 @@ function useUpload() {
           const formData = new FormData();
           formData.append("file", asset.file);
 
-          response = await fetch("/_create/api/upload/", {
+          response = await apiFetch("/_create/api/upload/", {
             method: "POST",
             body: formData,
           });
         } else {
           // Fallback to presigned Uploadcare upload
-          const presignRes = await fetch("/_create/api/upload/presign/", {
+          const presignRes = await apiFetchJson("/_create/api/upload/presign/", {
             method: "POST",
           });
-          const { secureSignature, secureExpire } = await presignRes.json();
+          const { secureSignature, secureExpire } = presignRes || {};
 
           const result = await client.uploadFile(asset, {
             fileName: asset.name ?? asset.uri.split("/").pop(),
@@ -36,7 +37,7 @@ function useUpload() {
           return { url: `${process.env.EXPO_PUBLIC_BASE_CREATE_USER_CONTENT_URL}/${result.uuid}/`, mimeType: result.mimeType || null };
         }
       } else if ("url" in input) {
-        response = await fetch("/_create/api/upload/", {
+        response = await apiFetch("/_create/api/upload/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -44,7 +45,7 @@ function useUpload() {
           body: JSON.stringify({ url: input.url })
         });
       } else if ("base64" in input) {
-        response = await fetch("/_create/api/upload/", {
+        response = await apiFetch("/_create/api/upload/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -52,7 +53,7 @@ function useUpload() {
           body: JSON.stringify({ base64: input.base64 })
         });
       } else {
-        response = await fetch("/_create/api/upload/", {
+        response = await apiFetch("/_create/api/upload/", {
           method: "POST",
           headers: {
             "Content-Type": "application/octet-stream"

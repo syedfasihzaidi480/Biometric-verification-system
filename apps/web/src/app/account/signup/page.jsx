@@ -100,11 +100,13 @@ export default function SignUpPage() {
       // Now sign in with the credentials that were just created
       console.log('[SIGNUP] Registration successful, signing in...');
       try {
+        // After successful registration, sign in without forcing a callbackUrl.
+        // This allows the mobile WebView to pass ?callbackUrl=/api/auth/token
+        // so the native app can complete the auth flow.
         await signInWithCredentials({
           email: formData.email.trim(),
           password: formData.password.trim(),
           redirect: true,
-          callbackUrl: "/",
         });
       } catch (e) {
         console.error('[SIGNUP] Sign-in after registration failed:', e);

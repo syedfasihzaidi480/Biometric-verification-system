@@ -13,6 +13,7 @@ import { router } from 'expo-router';
 import { ArrowLeft, Mic, Play, Square } from 'lucide-react-native';
 import { Audio } from 'expo-av';
 import { useTranslation } from '@/i18n/useTranslation';
+import { apiFetch } from '@/utils/api';
 
 export default function VoiceLoginScreen() {
   const insets = useSafeAreaInsets();
@@ -147,12 +148,9 @@ export default function VoiceLoginScreen() {
       });
       formData.append('userId', '1'); // Should come from user context
 
-      const response = await fetch('/api/voice/verify', {
+      const response = await apiFetch('/api/voice/verify', {
         method: 'POST',
         body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
       });
 
       const result = await response.json();

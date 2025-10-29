@@ -22,6 +22,7 @@ import {
 import { Audio } from "expo-audio";
 import { useTranslation } from "@/i18n/useTranslation";
 import { useUpload } from "@/utils/useUpload";
+import { apiFetch, apiFetchJson } from "@/utils/api";
 
 export default function VoiceEnrollmentScreen() {
   const insets = useSafeAreaInsets();
@@ -216,12 +217,9 @@ export default function VoiceEnrollmentScreen() {
         formData.append("sessionToken", sessionToken);
       }
 
-      const response = await fetch("/api/voice/enroll", {
+      const response = await apiFetch("/api/voice/enroll", {
         method: "POST",
         body: formData,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
       });
 
       const result = await response.json();
@@ -265,8 +263,22 @@ export default function VoiceEnrollmentScreen() {
     // Don't increment current sample, just allow re-recording
   };
 
-  const handleContinue = () => {
-    if (enrollmentComplete) {
+  const handleContinue = async () => {
+    if (!enrollmentComplete) return;
+    try {
+      await apiFetch("/api/profile", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          voice_verified: true,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to update user verification status:", error);
+    } finally {
       router.push({
         pathname: "/liveness-check",
         params: { userId },
@@ -329,106 +341,104 @@ export default function VoiceEnrollmentScreen() {
         >
           <ArrowLeft size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t("voiceEnrollment.title")}</Text>
+        <Text style={styles.headerTitle}>Voice Verification</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
         showsVerticalScrollIndicator={false}
       >
         {!enrollmentComplete ? (
           <>
-            {/* Progress */}
+            {/* Progress Indicator */}
             <View style={styles.progressContainer}>
               <Text style={styles.progressText}>
-                {t("voiceEnrollment.sample")} {currentSample}{" "}
-                {t("voiceEnrollment.of")} {totalSamples}
+                Sample {currentSample} of {totalSamples}
               </Text>
-              <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    {
-                      width: `${(completedSamples.length / totalSamples) * 100}%`,
-                    },
-                  ]}
-                />
+              <View style={styles.dotsContainer}>
+                {[1, 2, 3].map((num) => (
+                  <View
+                    key={num}
+                    style={[
+                      styles.dot,
+                      completedSamples.includes(num) && styles.dotCompleted,
+                      currentSample === num && styles.dotActive,
+                    ]}
+                  />
+                ))}
               </View>
             </View>
 
             {/* Instructions */}
-            <View style={styles.instructionsContainer}>
-              <Text style={styles.subtitle}>
-                Record your voice for Voice ID verification
+            <View style={styles.instructionCard}>
+              <Text style={styles.instructionTitle}>
+                Please read the following phrase clearly:
               </Text>
-              <Text style={styles.instructions}>
-                Please answer the following question clearly and loudly:
-              </Text>
-            </View>
-
-            {/* Question Text */}
-            <View style={styles.scriptContainer}>
-              <View style={styles.questionHeader}>
-                <Text style={styles.questionLabel}>
-                  Question {currentSample} of {totalSamples}
-                </Text>
+              <View style={styles.phraseBox}>
+                <Text style={styles.phraseText}>{getCurrentQuestion()}</Text>
               </View>
-              <Text style={styles.scriptText}>{getCurrentQuestion()}</Text>
             </View>
 
-            {/* Recording Controls */}
-            <View style={styles.recordingContainer}>
-              {/* Duration Display */}
-              {(isRecording || recordingDuration > 0) && (
-                <Text style={styles.durationText}>
-                  {Math.floor(recordingDuration / 60)}:
-                  {(recordingDuration % 60).toString().padStart(2, "0")}
-                </Text>
-              )}
-
+            {/* Recording Area */}
+            <View style={styles.recordingArea}>
               {/* Recording Button */}
               <Animated.View
                 style={[
-                  styles.recordButton,
+                  styles.recordButtonContainer,
                   { transform: [{ scale: isRecording ? pulseAnimation : 1 }] },
                 ]}
               >
                 <TouchableOpacity
                   style={[
-                    styles.recordButtonInner,
+                    styles.recordButton,
                     isRecording && styles.recordButtonActive,
                   ]}
                   onPress={isRecording ? processRecording : startRecording}
                   disabled={isProcessing}
                 >
-                  {isRecording ? (
-                    <Square size={32} color="#FFFFFF" />
-                  ) : (
-                    <Mic size={32} color="#FFFFFF" />
-                  )}
+                  <Mic size={48} color="#FFFFFF" />
                 </TouchableOpacity>
               </Animated.View>
 
-              {/* Control Text */}
-              <Text style={styles.recordText}>
+              {/* Status Text */}
+              <Text style={styles.statusText}>
                 {isProcessing
-                  ? t("voiceEnrollment.processing")
+                  ? "Processing..."
                   : isRecording
-                    ? t("voiceEnrollment.stopRecording")
-                    : t("voiceEnrollment.startRecording")}
+                    ? "Recording..."
+                    : recordingDuration > 0
+                      ? "Recording Complete"
+                      : "Tap to Record"}
               </Text>
 
-              {/* Retry Button */}
-              {recordingDuration > 0 && !isRecording && !isProcessing && (
+              {/* Duration */}
+              {isRecording && (
+                <Text style={styles.durationText}>
+                  {Math.floor(recordingDuration / 60)}:
+                  {(recordingDuration % 60).toString().padStart(2, "0")}
+                </Text>
+              )}
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.actionButtons}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => router.back()}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              {recordingDuration > 0 && !isRecording && (
                 <TouchableOpacity
-                  style={styles.retryButton}
-                  onPress={retryCurrentSample}
+                  style={[styles.submitButton, isProcessing && styles.submitButtonDisabled]}
+                  onPress={processRecording}
+                  disabled={isProcessing}
                 >
-                  <RotateCcw size={20} color="#007AFF" />
-                  <Text style={styles.retryText}>
-                    {t("voiceEnrollment.recordAgain")}
+                  <Text style={styles.submitButtonText}>
+                    {isProcessing ? "Processing..." : "Submit"}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -438,34 +448,31 @@ export default function VoiceEnrollmentScreen() {
           /* Enrollment Complete */
           <View style={styles.completedContainer}>
             <View style={styles.completedIcon}>
-              <CheckCircle size={64} color="#10B981" />
+              <CheckCircle size={80} color="#10B981" />
             </View>
 
             <Text style={styles.completedTitle}>
-              {t("voiceEnrollment.enrollmentComplete")}
+              Voice Verification Complete!
+            </Text>
+
+            <Text style={styles.completedSubtitle}>
+              Your voice has been successfully enrolled
             </Text>
 
             {matchScore && (
-              <Text style={styles.matchScoreText}>
-                {t("voiceEnrollment.matchScore", {
-                  score: Math.round(matchScore * 100),
-                })}
-              </Text>
+              <View style={styles.scoreCard}>
+                <Text style={styles.scoreLabel}>Match Score</Text>
+                <Text style={styles.scoreValue}>
+                  {Math.round(matchScore * 100)}%
+                </Text>
+              </View>
             )}
-
-            <Text style={styles.qualityText}>
-              {matchScore > 0.8
-                ? t("voiceEnrollment.qualityGood")
-                : t("voiceEnrollment.qualityPoor")}
-            </Text>
 
             <TouchableOpacity
               style={styles.continueButton}
               onPress={handleContinue}
             >
-              <Text style={styles.continueButtonText}>
-                {t("common.continue")}
-              </Text>
+              <Text style={styles.continueButtonText}>Continue</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -477,15 +484,16 @@ export default function VoiceEnrollmentScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F5F5F5",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
+    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F4F6",
+    borderBottomColor: "#E5E7EB",
   },
   backButton: {
     padding: 4,
@@ -493,7 +501,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
     color: "#1F2937",
     textAlign: "center",
   },
@@ -504,116 +512,141 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 40,
+    padding: 20,
   },
   progressContainer: {
-    paddingHorizontal: 24,
-    paddingVertical: 20,
+    alignItems: "center",
+    marginBottom: 30,
   },
   progressText: {
     fontSize: 14,
     color: "#6B7280",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  progressBar: {
-    height: 4,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 2,
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#007AFF",
-    borderRadius: 2,
-  },
-  instructionsContainer: {
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#6B7280",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  instructions: {
-    fontSize: 14,
-    color: "#9CA3AF",
-    textAlign: "center",
-  },
-  scriptContainer: {
-    margin: 24,
-    padding: 20,
-    backgroundColor: "#F0F9FF",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#BAE6FD",
-  },
-  questionHeader: {
     marginBottom: 12,
+    fontWeight: "500",
+  },
+  dotsContainer: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 8,
   },
-  questionLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#6B7280",
-    textTransform: "uppercase",
-    letterSpacing: 1,
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#E5E7EB",
   },
-  scriptText: {
+  dotCompleted: {
+    backgroundColor: "#10B981",
+  },
+  dotActive: {
+    backgroundColor: "#007AFF",
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  instructionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 40,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  instructionTitle: {
     fontSize: 16,
+    fontWeight: "600",
     color: "#1F2937",
     textAlign: "center",
-    lineHeight: 24,
+    marginBottom: 20,
   },
-  recordingContainer: {
+  phraseBox: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  phraseText: {
+    fontSize: 15,
+    fontStyle: "italic",
+    color: "#374151",
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  recordingArea: {
     alignItems: "center",
-    paddingVertical: 40,
+    marginBottom: 40,
   },
-  durationText: {
-    fontSize: 24,
-    fontWeight: "600",
-    color: "#1F2937",
+  recordButtonContainer: {
     marginBottom: 20,
   },
   recordButton: {
-    marginBottom: 20,
-  },
-  recordButtonInner: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: "#007AFF",
     alignItems: "center",
     justifyContent: "center",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowColor: "#007AFF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
   recordButtonActive: {
     backgroundColor: "#EF4444",
+    shadowColor: "#EF4444",
   },
-  recordText: {
+  statusText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1F2937",
+    marginBottom: 8,
+  },
+  durationText: {
     fontSize: 16,
     color: "#6B7280",
-    textAlign: "center",
-    marginBottom: 20,
+    fontWeight: "500",
   },
-  retryButton: {
+  actionButtons: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    gap: 12,
   },
-  retryText: {
-    marginLeft: 8,
-    fontSize: 14,
-    color: "#007AFF",
+  cancelButton: {
+    flex: 1,
+    backgroundColor: "#9CA3AF",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  submitButton: {
+    flex: 1,
+    backgroundColor: "#10B981",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  submitButtonDisabled: {
+    backgroundColor: "#9CA3AF",
+    shadowOpacity: 0.1,
+  },
+  submitButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
   },
   // Consent Modal Styles
   consentContainer: {
@@ -621,26 +654,33 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   consentContent: {
     backgroundColor: "#FFFFFF",
-    padding: 24,
-    borderRadius: 16,
-    alignItems: "center",
+    padding: 28,
+    borderRadius: 20,
+    width: "100%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   consentTitle: {
-    fontSize: 20,
-    fontWeight: "600",
+    fontSize: 22,
+    fontWeight: "700",
     color: "#1F2937",
     textAlign: "center",
     marginBottom: 16,
   },
   consentMessage: {
-    fontSize: 14,
+    fontSize: 15,
     color: "#6B7280",
     textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 24,
+    lineHeight: 22,
+    marginBottom: 28,
   },
   consentCheckbox: {
     marginBottom: 24,
@@ -648,53 +688,84 @@ const styles = StyleSheet.create({
   consentCheckboxText: {
     fontSize: 14,
     color: "#374151",
+    textAlign: "center",
   },
   consentButton: {
     backgroundColor: "#007AFF",
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: 40,
+    paddingVertical: 16,
+    borderRadius: 12,
+    shadowColor: "#007AFF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   consentButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
+    textAlign: "center",
   },
   // Completion Styles
   completedContainer: {
     alignItems: "center",
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingVertical: 60,
   },
   completedIcon: {
-    marginBottom: 24,
+    marginBottom: 30,
   },
   completedTitle: {
-    fontSize: 24,
-    fontWeight: "600",
+    fontSize: 26,
+    fontWeight: "700",
     color: "#1F2937",
     textAlign: "center",
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  matchScoreText: {
-    fontSize: 18,
-    color: "#10B981",
-    marginBottom: 8,
+  completedSubtitle: {
+    fontSize: 16,
+    color: "#6B7280",
+    textAlign: "center",
+    marginBottom: 30,
   },
-  qualityText: {
+  scoreCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 40,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  scoreLabel: {
     fontSize: 14,
     color: "#6B7280",
-    marginBottom: 32,
+    marginBottom: 8,
+    fontWeight: "500",
+  },
+  scoreValue: {
+    fontSize: 36,
+    fontWeight: "700",
+    color: "#10B981",
   },
   continueButton: {
     backgroundColor: "#007AFF",
-    paddingHorizontal: 32,
+    paddingHorizontal: 48,
     paddingVertical: 16,
     borderRadius: 12,
+    shadowColor: "#007AFF",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   continueButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 17,
+    fontWeight: "700",
   },
 });

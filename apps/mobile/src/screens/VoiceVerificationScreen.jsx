@@ -14,6 +14,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Mic, Square, RotateCcw, CheckCircle, Volume2 } from 'lucide-react-native';
 import { Audio } from 'expo-audio';
 import { useTranslation } from '@/i18n/useTranslation';
+import { apiFetch } from '@/utils/api';
 
 export default function VoiceVerificationScreen() {
   const insets = useSafeAreaInsets();
@@ -191,12 +192,9 @@ export default function VoiceVerificationScreen() {
         name: `voice_verification.m4a`,
       });
 
-      const response = await fetch('/api/voice/verify', {
+      const response = await apiFetch('/api/voice/verify', {
         method: 'POST',
         body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
       });
 
       const result = await response.json();
@@ -246,7 +244,7 @@ export default function VoiceVerificationScreen() {
 
   const updateUserVerificationStatus = async () => {
     try {
-      await fetch('/api/profile', {
+      await apiFetch('/api/profile', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

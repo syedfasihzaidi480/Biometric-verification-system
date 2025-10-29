@@ -23,6 +23,8 @@ import {
   Lock,
 } from "lucide-react-native";
 import { useTranslation } from "@/i18n/useTranslation";
+import { apiFetchJson } from "@/utils/api";
+import { signInWithCredentials } from "@/utils/auth/credentials";
 
 export default function RegistrationScreen() {
   const insets = useSafeAreaInsets();
@@ -97,12 +99,12 @@ export default function RegistrationScreen() {
       const [day, month, year] = formData.dateOfBirth.split("/");
       const isoDate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 
-      const response = await fetch("/api/auth/register", {
+      const result = await apiFetchJson("/api/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
+        body: {
           name: formData.fullName.trim(),
           phone: formData.phoneNumber.trim(),
           email: formData.email.trim(),
@@ -110,12 +112,17 @@ export default function RegistrationScreen() {
           date_of_birth: isoDate,
           pension_number: formData.pensionNumber.trim(),
           preferred_language: currentLanguage,
-        }),
+        },
       });
 
-      const result = await response.json();
-
       if (result.success) {
+        // Auto sign-in after successful registration
+        await signInWithCredentials({
+          email: formData.email.trim(),
+          password: formData.password.trim(),
+          callbackUrl: "/",
+        });
+
         // Store user data for next steps
         router.push({
           pathname: "/voice-enrollment",

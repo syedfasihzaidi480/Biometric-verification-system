@@ -13,10 +13,11 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/utils/auth/useAuth';
 import useUser from '@/utils/auth/useUser';
-import { ChevronDown, Upload, CheckCircle } from 'lucide-react-native';
+import { ChevronDown, Upload, CheckCircle, User, Phone, Calendar } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import KeyboardAvoidingAnimatedView from '@/components/KeyboardAvoidingAnimatedView';
+import { apiFetch, apiFetchJson } from '@/utils/api';
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
@@ -49,9 +50,8 @@ export default function RegisterScreen() {
   const fetchProfile = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/profile');
-      const result = await response.json();
-      if (result.success && result.user) {
+      const result = await apiFetchJson('/api/profile');
+      if (result?.success && result.user) {
         const user = result.user;
         setProfile(user);
         setFullName(user.name || '');
@@ -188,15 +188,13 @@ export default function RegisterScreen() {
         profile_completed: true,
       };
 
-      const response = await fetch('/api/profile', {
+      const result = await apiFetchJson('/api/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updateData),
+        body: updateData,
       });
-
-      const result = await response.json();
       
       if (result.success) {
         // TODO: Upload document if selected
@@ -234,12 +232,9 @@ export default function RegisterScreen() {
       formData.append('document', selectedDocument);
       formData.append('documentType', idDocumentType);
 
-      const response = await fetch('/api/document/upload', {
+      const response = await apiFetch('/api/document/upload', {
         method: 'POST',
         body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
       });
 
       if (!response.ok) {
@@ -287,87 +282,91 @@ export default function RegisterScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Profile Registration</Text>
-          <Text style={styles.headerSubtitle}>Complete your personal information</Text>
+          <Text style={styles.headerSubtitle}>Complete your profile to begin verification</Text>
         </View>
 
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 20 }]}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Personal Information Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
+          {/* Personal Information Card */}
+          <View style={styles.infoCard}>
+            <Text style={styles.cardTitle}>Personal Information</Text>
             
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Full Name *</Text>
-              <TextInput
-                style={styles.input}
-                value={fullName}
-                onChangeText={setFullName}
-                placeholder="Enter your full name"
-                placeholderTextColor="#9CA3AF"
-              />
+              <Text style={styles.label}>Full Name</Text>
+              <View style={styles.inputContainer}>
+                <User size={18} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder={profile?.name || 'Fasih'}
+                  placeholderTextColor="#9CA3AF"
+                  autoCapitalize="words"
+                />
+              </View>
             </View>
 
             <View style={styles.formGroup}>
               <Text style={styles.label}>Mobile Number *</Text>
-              <TextInput
-                style={styles.input}
-                value={mobileNumber}
-                onChangeText={setMobileNumber}
-                placeholder="Enter your mobile number"
-                keyboardType="phone-pad"
-                placeholderTextColor="#9CA3AF"
-              />
+              <View style={styles.inputContainer}>
+                <Phone size={18} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={mobileNumber}
+                  onChangeText={setMobileNumber}
+                  placeholder="Enter your mobile number"
+                  keyboardType="phone-pad"
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
             </View>
 
             <View style={styles.formGroup}>
               <Text style={styles.label}>Date of Birth *</Text>
-              <TextInput
-                style={styles.input}
-                value={dateOfBirth}
-                onChangeText={setDateOfBirth}
-                placeholder="DD/MM/YYYY"
-                placeholderTextColor="#9CA3AF"
-              />
+              <View style={styles.inputContainer}>
+                <Calendar size={18} color="#9CA3AF" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={dateOfBirth}
+                  onChangeText={setDateOfBirth}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="numeric"
+                />
+              </View>
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>ID Document Type *</Text>
-              <TouchableOpacity
-                style={styles.picker}
-                onPress={() => {
-                  Alert.alert(
-                    'Select Document Type',
-                    '',
-                    documentTypes.map(type => ({
-                      text: type.label,
-                      onPress: () => setIdDocumentType(type.value),
-                    })).concat([{
-                      text: 'Cancel',
-                      style: 'cancel',
-                    }])
-                  );
-                }}
-              >
-                <Text style={[
-                  styles.pickerText,
-                  !idDocumentType && { color: '#9CA3AF' }
-                ]}>
-                  {idDocumentType 
-                    ? documentTypes.find(t => t.value === idDocumentType)?.label
-                    : 'Select document type'
-                  }
-                </Text>
-                <ChevronDown size={20} color="#9CA3AF" />
-              </TouchableOpacity>
+              <Text style={styles.label}>ID Document Type</Text>
+              <View style={styles.documentTypeRow}>
+                {documentTypes.map((type) => (
+                  <TouchableOpacity
+                    key={type.value}
+                    style={[
+                      styles.documentTypeButton,
+                      idDocumentType === type.value && styles.documentTypeButtonActive
+                    ]}
+                    onPress={() => setIdDocumentType(type.value)}
+                  >
+                    <Text style={[
+                      styles.documentTypeText,
+                      idDocumentType === type.value && styles.documentTypeTextActive
+                    ]}>
+                      {type.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           </View>
 
-          {/* Document Upload Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>ID Document Upload</Text>
+          {/* Document Upload Card */}
+          <View style={styles.uploadCard}>
+            <Text style={styles.cardTitle}>ID Document Upload</Text>
             
             <TouchableOpacity
               style={styles.uploadArea}
@@ -414,30 +413,29 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F5F5F5',
   },
   centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
   },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingVertical: 20,
+    backgroundColor: '#F5F5F5',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '700',
     color: '#1F2937',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   headerSubtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#6B7280',
+    lineHeight: 20,
   },
   title: {
     fontSize: 24,
@@ -462,14 +460,34 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 12,
   },
-  section: {
-    marginBottom: 24,
+  // Card styles
+  infoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  sectionTitle: {
+  uploadCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1F2937',
     marginBottom: 16,
   },
@@ -480,53 +498,74 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#374151',
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    flex: 1,
     fontSize: 16,
     color: '#1F2937',
   },
-  picker: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+  documentTypeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 10,
+  },
+  documentTypeButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
   },
-  pickerText: {
-    fontSize: 16,
-    color: '#1F2937',
+  documentTypeButtonActive: {
+    borderColor: '#007AFF',
+    backgroundColor: '#EFF6FF',
+  },
+  documentTypeText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  documentTypeTextActive: {
+    color: '#007AFF',
   },
   uploadArea: {
-    backgroundColor: '#FFFFFF',
     borderWidth: 2,
     borderColor: '#E5E7EB',
     borderStyle: 'dashed',
     borderRadius: 12,
-    padding: 24,
+    paddingVertical: 40,
     alignItems: 'center',
+    backgroundColor: '#FAFAFA',
   },
   uploadPrompt: {
     alignItems: 'center',
   },
+  uploadIcon: {
+    fontSize: 36,
+    marginBottom: 12,
+  },
   uploadText: {
-    fontSize: 16,
-    color: '#374151',
-    marginTop: 8,
+    fontSize: 15,
+    color: '#6B7280',
     marginBottom: 4,
   },
   uploadSubtext: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#9CA3AF',
   },
   uploadedDocument: {
@@ -539,40 +578,46 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   fileName: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
     marginTop: 4,
   },
   footer: {
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5F5F5',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
   },
   saveButton: {
-    backgroundColor: '#3B82F6',
-    paddingVertical: 14,
-    borderRadius: 8,
+    backgroundColor: '#007AFF',
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   saveButtonDisabled: {
     backgroundColor: '#9CA3AF',
+    shadowOpacity: 0,
   },
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   primaryButton: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#007AFF',
     paddingHorizontal: 32,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

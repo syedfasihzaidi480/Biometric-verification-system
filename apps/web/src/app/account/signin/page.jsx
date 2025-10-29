@@ -23,10 +23,11 @@ export default function SignInPage() {
     }
 
     try {
+      // Don't force a callbackUrl here — let the mobile WebView supply
+      // ?callbackUrl=/api/auth/token so the native app can capture the JWT.
       await signInWithCredentials({
         email,
         password,
-        callbackUrl: "/",
         redirect: true,
       });
     } catch (err) {
