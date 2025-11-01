@@ -35,19 +35,23 @@ export default function AdminDashboard() {
 
   const checkAuth = async () => {
     try {
+      console.log("[ADMIN DASHBOARD] Checking authentication...");
       const response = await fetch("/api/admin/auth/check");
       const result = await response.json();
+      console.log("[ADMIN DASHBOARD] Auth check result:", result);
 
-      if (!result.success || !result.data?.isAdmin) {
+      if (!result.success || !result.isAdmin) {
+        console.log("[ADMIN DASHBOARD] Not authenticated or not admin, redirecting to signin");
         navigate("/admin/signin");
         return;
       }
 
+      console.log("[ADMIN DASHBOARD] Authentication successful");
       setIsSuperAdmin(result.isSuperAdmin || false);
       setIsCheckingAuth(false);
       loadVerificationRequests();
     } catch (error) {
-      console.error("Auth check failed:", error);
+      console.error("[ADMIN DASHBOARD] Auth check failed:", error);
       navigate("/admin/signin");
     }
   };
@@ -55,17 +59,22 @@ export default function AdminDashboard() {
   const loadVerificationRequests = async () => {
     setIsLoading(true);
     try {
+      console.log("[DASHBOARD] Fetching verification requests...");
       const response = await fetch("/api/admin/verifications");
       const result = await response.json();
+      console.log("[DASHBOARD] Received data:", result);
 
       if (result.success && result.data && result.data.verifications) {
+        console.log("[DASHBOARD] Setting", result.data.verifications.length, "verification requests");
+        console.log("[DASHBOARD] First request:", result.data.verifications[0]);
         setVerificationRequests(result.data.verifications);
       } else {
         // If no data, keep empty array
+        console.log("[DASHBOARD] No verification data received");
         setVerificationRequests([]);
       }
     } catch (error) {
-      console.error("Error loading verification requests:", error);
+      console.error("[DASHBOARD] Error loading verification requests:", error);
       setVerificationRequests([]); // Ensure it's always an array
     } finally {
       setIsLoading(false);
@@ -146,12 +155,10 @@ export default function AdminDashboard() {
     ? verificationRequests.filter((request) => {
         const matchesFilter = filter === "all" || request.status === filter;
         const matchesSearch =
-          request.user?.name
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
+          searchTerm === '' ||
+          request.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           request.user?.phone?.includes(searchTerm) ||
-          request.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          request.user_phone?.includes(searchTerm);
+          request.user?.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
         return matchesFilter && matchesSearch;
       })
@@ -360,10 +367,10 @@ export default function AdminDashboard() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div>
                               <div className="text-sm font-medium text-gray-900">
-                                {request.user_name}
+                                {request.user?.name || request.user_name || 'Unknown User'}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {request.user_phone}
+                                {request.user?.phone || request.user_phone || '-'}
                               </div>
                             </div>
                           </td>

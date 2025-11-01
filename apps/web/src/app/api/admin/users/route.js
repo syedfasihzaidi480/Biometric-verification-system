@@ -41,68 +41,38 @@ export async function GET(request) {
       match.admin_approved = { $ne: true };
     }
 
-    // Get users with aggregation
-    const pipeline = [
-      { $match: match },
-      { $sort: { created_at: -1 } },
-      { $skip: offset },
-      { $limit: limit },
-      {
-        $lookup: {
-          from: 'verification_requests',
-          localField: 'id',
-          foreignField: 'user_id',
-          as: 'verification_requests'
-        }
-      },
-      {
-        $lookup: {
-          from: 'voice_profiles',
-          localField: 'id',
-          foreignField: 'user_id',
-          as: 'voice_profile'
-        }
-      },
-      {
-        $addFields: {
-          latest_verification: { $arrayElemAt: ['$verification_requests', -1] },
-          voice_profile: { $first: '$voice_profile' }
-        }
-      }
-    ];
+    console.log('[Admin Users] Fetching users with filters:', { page, limit, search, status });
+    const startTime = Date.now();
 
-    const usersList = await users.aggregate(pipeline).toArray();
+    // Simplified query - just get users without expensive lookups
+    const usersList = await users
+      .find(match)
+      .sort({ created_at: -1 })
+      .skip(offset)
+      .limit(limit)
+      .toArray();
+
+    console.log(`[Admin Users] Fetched ${usersList.length} users in ${Date.now() - startTime}ms`);
+
+    // Get total count (this is fast with proper indexes)
     const total = await users.countDocuments(match);
 
-    // Get summary statistics
-    const stats = await users.aggregate([
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          verified: {
-            $sum: { $cond: [{ $eq: ['$admin_approved', true] }, 1, 0] }
-          },
-          profile_completed: {
-            $sum: { $cond: [{ $eq: ['$profile_completed', true] }, 1, 0] }
-          },
-          voice_verified: {
-            $sum: { $cond: [{ $eq: ['$voice_verified', true] }, 1, 0] }
-          },
-          document_verified: {
-            $sum: { $cond: [{ $eq: ['$document_verified', true] }, 1, 0] }
-          }
-        }
-      }
-    ]).toArray();
+    // Simple summary statistics using countDocuments (much faster)
+    const [verifiedCount, voiceVerifiedCount, documentVerifiedCount] = await Promise.all([
+      users.countDocuments({ admin_approved: true }),
+      users.countDocuments({ voice_verified: true }),
+      users.countDocuments({ document_verified: true }),
+    ]);
 
-    const summary = stats[0] || {
-      total: 0,
-      verified: 0,
-      profile_completed: 0,
-      voice_verified: 0,
-      document_verified: 0
+    const summary = {
+      total: total,
+      verified: verifiedCount,
+      profile_completed: 0, // Can calculate if needed
+      voice_verified: voiceVerifiedCount,
+      document_verified: documentVerifiedCount,
     };
+
+    console.log(`[Admin Users] Total request time: ${Date.now() - startTime}ms`);
 
     return Response.json({
       success: true,
@@ -123,9 +93,6 @@ export async function GET(request) {
           payment_released: user.payment_released,
           created_at: user.created_at,
           updated_at: user.updated_at,
-          verification_status: user.latest_verification?.status || null,
-          voice_enrolled: user.voice_profile?.is_enrolled || false,
-          enrollment_samples_count: user.voice_profile?.enrollment_samples_count || 0,
         })),
         pagination: {
           page,

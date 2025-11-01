@@ -18,6 +18,8 @@ export default function AdminSignInPage() {
     setIsLoading(true);
 
     try {
+      console.log("[SIGNIN] Starting signin process for:", email, "as", role);
+      
       // First verify admin role and approval status
       const checkResponse = await fetch("/api/admin/auth/signin", {
         method: "POST",
@@ -27,7 +29,9 @@ export default function AdminSignInPage() {
         body: JSON.stringify({ email, password, requiredRole: role }),
       });
 
+      console.log("[SIGNIN] Admin check response status:", checkResponse.status);
       const checkResult = await checkResponse.json();
+      console.log("[SIGNIN] Admin check result:", checkResult);
 
       if (!checkResult.success) {
         setError(checkResult.error || "Invalid credentials");
@@ -49,49 +53,76 @@ export default function AdminSignInPage() {
         return;
       }
 
-      // Use Auth.js callback URL approach
+      console.log("[SIGNIN] Admin verification passed, calling Auth.js signin...");
+
+      // Use Auth.js signin endpoint (correct for credentials provider)
       const formData = new URLSearchParams();
       formData.append("email", email);
       formData.append("password", password);
       formData.append("callbackUrl", "/admin");
 
-      const signInResponse = await fetch("/api/auth/callback/credentials", {
+      const signInResponse = await fetch("/api/auth/signin/credentials", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: formData.toString(),
         credentials: "include",
-        redirect: "follow", // Allow browser to follow redirects
+        redirect: "manual", // Important: handle redirects manually
       });
 
-      console.log("SignIn response status:", signInResponse.status);
-      console.log("SignIn response URL:", signInResponse.url);
+      console.log("[SIGNIN] Auth.js response status:", signInResponse.status);
+      console.log("[SIGNIN] Auth.js response headers:", Object.fromEntries(signInResponse.headers.entries()));
       
-      // Check if we were redirected (successful signin)
-      if (signInResponse.url && (signInResponse.url.includes("/admin") || signInResponse.url.includes("error") === false)) {
-        // Successfully signed in
-        window.location.href = "/admin";
-      } else if (signInResponse.url && signInResponse.url.includes("error")) {
-        // Auth.js redirected to error page
-        setError("Authentication failed. Please check your credentials.");
-        setIsLoading(false);
-      } else if (signInResponse.status === 200) {
-        // Check response content
-        const text = await signInResponse.text();
-        if (text && !text.includes("error")) {
-          window.location.href = "/admin";
-        } else {
-          setError("Authentication failed. Please check your credentials.");
-          setIsLoading(false);
+      // Check if Auth.js is redirecting (302 status code)
+      if (signInResponse.status === 302) {
+        const location = signInResponse.headers.get('location');
+        console.log("[SIGNIN] Redirect location:", location);
+        
+        // Check if redirecting to error page
+        if (location && location.includes('/account/signin')) {
+          const url = new URL(location, window.location.origin);
+          const error = url.searchParams.get('error');
+          if (error) {
+            console.error("[SIGNIN] Auth.js error:", error);
+            setError("Authentication failed. Please check your credentials.");
+            setIsLoading(false);
+            return;
+          }
         }
-      } else {
-        setError("Failed to sign in. Please try again.");
-        setIsLoading(false);
+        
+        // If redirect is not to error page, assume success
+        console.log("[SIGNIN] Auth.js signin successful, verifying session...");
       }
+      
+      // Wait a moment for session cookie to be set
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Verify session was created by checking the session endpoint
+      console.log("[SIGNIN] Verifying session...");
+      const sessionResponse = await fetch("/api/auth/session", {
+        credentials: "include",
+      });
+      
+      if (sessionResponse.ok) {
+        const session = await sessionResponse.json();
+        console.log("[SIGNIN] Session verified:", session);
+        
+        if (session && session.user) {
+          console.log("[SIGNIN] Session valid, redirecting to admin dashboard");
+          // Use navigate for React Router instead of window.location
+          window.location.href = "/admin";
+          return;
+        }
+      }
+      
+      // If session check fails, show error
+      console.error("[SIGNIN] Session verification failed");
+      setError("Authentication failed. Please try again.");
+      setIsLoading(false);
     } catch (err) {
+      console.error("[SIGNIN] Error:", err);
       setError("Failed to sign in. Please try again.");
-      console.error("Sign in error:", err);
     } finally {
       setIsLoading(false);
     }
