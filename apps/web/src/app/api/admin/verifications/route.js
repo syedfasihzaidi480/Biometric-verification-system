@@ -81,16 +81,6 @@ export async function GET(request) {
     const verifications = await verificationRequests.aggregate(pipeline).toArray();
     const total = await verificationRequests.countDocuments(match);
 
-    console.log(`[Admin Verifications] Found ${verifications.length} verifications`);
-    if (verifications.length > 0) {
-      console.log('[Admin Verifications] Sample verification:', {
-        id: verifications[0].id,
-        user_id: verifications[0].user_id,
-        user: verifications[0].user,
-        status: verifications[0].status,
-      });
-    }
-
     const statusSummaryDocs = await verificationRequests
       .aggregate([
         { $group: { _id: '$status', count: { $sum: 1 } } },
@@ -102,13 +92,10 @@ export async function GET(request) {
       return acc;
     }, {});
 
-    const mappedVerifications = verifications.map(buildVerificationDto);
-    console.log('[Admin Verifications] Sample mapped verification:', mappedVerifications[0]);
-
     return Response.json({
       success: true,
       data: {
-        verifications: mappedVerifications,
+        verifications: verifications.map(buildVerificationDto),
         pagination: {
           page,
           limit,

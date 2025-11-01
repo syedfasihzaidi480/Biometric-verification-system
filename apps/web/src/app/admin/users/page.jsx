@@ -39,21 +39,24 @@ export default function AdminUsersPage() {
 
   const checkAuth = async () => {
     try {
-      console.log("[ADMIN USERS] Checking authentication...");
-      const response = await fetch("/api/admin/auth/check");
+      console.log("[Users Page] Checking authentication...");
+      const response = await fetch("/api/admin/auth/check", {
+        credentials: "include",
+      });
       const result = await response.json();
-      console.log("[ADMIN USERS] Auth check result:", result);
+      console.log("[Users Page] Auth check result:", result);
 
       if (!result.success || !result.isAdmin) {
-        console.log("[ADMIN USERS] Not authenticated or not admin, redirecting to signin");
+        console.log("[Users Page] Not authenticated or not admin, redirecting to signin");
         navigate("/admin/signin");
         return;
       }
 
-      console.log("[ADMIN USERS] Authentication successful");
+      console.log("[Users Page] Authentication successful");
       setIsCheckingAuth(false);
+      loadUsers();
     } catch (error) {
-      console.error("[ADMIN USERS] Auth check failed:", error);
+      console.error("Auth check failed:", error);
       navigate("/admin/signin");
     }
   };
@@ -69,7 +72,7 @@ export default function AdminUsersPage() {
     try {
       const params = new URLSearchParams({
         page: currentPage.toString(),
-        limit: '10', // Reduced for faster loading
+        limit: '20',
       });
 
       if (filter !== 'all') {
@@ -80,7 +83,7 @@ export default function AdminUsersPage() {
         params.append('search', searchTerm);
       }
 
-      const response = await fetch(`/api/admin/users?${params}`);
+  const response = await fetch(`/api/admin/users?${params}`, { credentials: 'include' });
       const result = await response.json();
 
       if (result.success && result.data) {
@@ -104,7 +107,7 @@ export default function AdminUsersPage() {
     setLoadingDetails(true);
     setSelectedUser(userId);
     try {
-      const response = await fetch(`/api/admin/users/${userId}`);
+  const response = await fetch(`/api/admin/users/${userId}`, { credentials: 'include' });
       const result = await response.json();
       
       if (result.success && result.data) {
@@ -170,13 +173,29 @@ export default function AdminUsersPage() {
                 </p>
               </div>
             </div>
-            <button
-              onClick={loadUsers}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <RefreshCw size={16} className="mr-2" />
-              Refresh
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={loadUsers}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <RefreshCw size={16} className="mr-2" />
+                Refresh
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await fetch("/api/auth/signout", { method: "POST", credentials: "include" });
+                    window.location.href = "/admin/signin";
+                  } catch (error) {
+                    console.error("Logout error:", error);
+                    window.location.href = "/admin/signin";
+                  }
+                }}
+                className="inline-flex items-center px-4 py-2 border border-red-300 bg-red-50 rounded-md shadow-sm text-sm font-medium text-red-700 hover:bg-red-100"
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -433,176 +452,78 @@ export default function AdminUsersPage() {
             ) : userDetails ? (
               <div className="p-6">
                 {/* Header */}
-                <div className="flex justify-between items-start mb-6 border-b pb-4">
+                <div className="flex justify-between items-start mb-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">{userDetails.user?.name || 'N/A'}</h2>
-                    <p className="text-sm text-gray-500">User ID: {userDetails.user?.id}</p>
-                    {userDetails.user?.email && (
-                      <p className="text-sm text-gray-500">{userDetails.user.email}</p>
-                    )}
+                    <h2 className="text-2xl font-bold text-gray-900">{userDetails.name || 'N/A'}</h2>
+                    <p className="text-sm text-gray-500">User ID: {userDetails.id}</p>
                   </div>
                   <button
                     onClick={closeUserDetails}
-                    className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+                    className="p-2 hover:bg-gray-100 rounded-md"
                   >
-                    <XCircle size={24} className="text-gray-600 hover:text-gray-900" />
+                    <XCircle size={24} />
                   </button>
                 </div>
 
-                {/* Status Badges */}
-                <div className="mb-6 flex flex-wrap gap-2">
-                  {getVerificationBadge(userDetails.user)}
-                  {userDetails.user?.voice_verified && (
-                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
-                      <Volume2 size={12} className="mr-1" />
-                      Voice Verified
-                    </span>
-                  )}
-                  {userDetails.user?.face_verified && (
-                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                      <Eye size={12} className="mr-1" />
-                      Face Verified
-                    </span>
-                  )}
-                  {userDetails.user?.document_verified && (
-                    <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
-                      <FileText size={12} className="mr-1" />
-                      Document Verified
-                    </span>
-                  )}
+                {/* Status Badge */}
+                <div className="mb-6">
+                  {getVerificationBadge(userDetails)}
                 </div>
-
-                {/* Statistics Overview */}
-                {userDetails.statistics && (
-                  <div className="mb-6 grid grid-cols-3 gap-4">
-                    <div className="bg-blue-50 rounded-lg p-3 text-center">
-                      <div className="text-2xl font-bold text-blue-600">{userDetails.statistics.total_verifications}</div>
-                      <div className="text-xs text-gray-600">Total Verifications</div>
-                    </div>
-                    <div className="bg-green-50 rounded-lg p-3 text-center">
-                      <div className="text-2xl font-bold text-green-600">{userDetails.statistics.approved_verifications}</div>
-                      <div className="text-xs text-gray-600">Approved</div>
-                    </div>
-                    <div className="bg-indigo-50 rounded-lg p-3 text-center">
-                      <div className="text-2xl font-bold text-indigo-600">{userDetails.statistics.total_documents}</div>
-                      <div className="text-xs text-gray-600">Documents</div>
-                    </div>
-                  </div>
-                )}
 
                 {/* Contact Information */}
                 <div className="mb-6 bg-gray-50 rounded-lg p-4">
                   <h3 className="text-lg font-semibold mb-3 flex items-center">
-                    <User size={20} className="mr-2 text-gray-700" />
-                    Personal Information
+                    <User size={20} className="mr-2" />
+                    Contact Information
                   </h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    {userDetails.user?.phone && (
-                      <div>
-                        <div className="flex items-center text-gray-600 mb-1">
-                          <Phone size={14} className="mr-2" />
-                          <span className="font-medium">Phone</span>
-                        </div>
-                        <span className="text-gray-900">{userDetails.user.phone}</span>
+                  <div className="space-y-2">
+                    {userDetails.phone && (
+                      <div className="flex items-center text-gray-700">
+                        <Phone size={16} className="mr-3 text-gray-400" />
+                        <span>{userDetails.phone}</span>
                       </div>
                     )}
-                    {userDetails.user?.email && (
-                      <div>
-                        <div className="flex items-center text-gray-600 mb-1">
-                          <Mail size={14} className="mr-2" />
-                          <span className="font-medium">Email</span>
-                        </div>
-                        <span className="text-gray-900">{userDetails.user.email}</span>
+                    {userDetails.email && (
+                      <div className="flex items-center text-gray-700">
+                        <Mail size={16} className="mr-3 text-gray-400" />
+                        <span>{userDetails.email}</span>
                       </div>
                     )}
-                    {userDetails.user?.date_of_birth && (
-                      <div>
-                        <div className="flex items-center text-gray-600 mb-1">
-                          <Calendar size={14} className="mr-2" />
-                          <span className="font-medium">Date of Birth</span>
-                        </div>
-                        <span className="text-gray-900">{new Date(userDetails.user.date_of_birth).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                    {userDetails.user?.preferred_language && (
-                      <div>
-                        <div className="text-gray-600 mb-1">
-                          <span className="font-medium">Language</span>
-                        </div>
-                        <span className="text-gray-900 uppercase">{userDetails.user.preferred_language}</span>
-                      </div>
-                    )}
-                    {userDetails.user?.created_at && (
-                      <div>
-                        <div className="text-gray-600 mb-1">
-                          <span className="font-medium">Registered</span>
-                        </div>
-                        <span className="text-gray-900">{new Date(userDetails.user.created_at).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                    {userDetails.user?.role && (
-                      <div>
-                        <div className="text-gray-600 mb-1">
-                          <span className="font-medium">Role</span>
-                        </div>
-                        <span className="text-gray-900 capitalize">{userDetails.user.role}</span>
+                    {userDetails.date_of_birth && (
+                      <div className="flex items-center text-gray-700">
+                        <Calendar size={16} className="mr-3 text-gray-400" />
+                        <span>DOB: {new Date(userDetails.date_of_birth).toLocaleDateString()}</span>
                       </div>
                     )}
                   </div>
                 </div>
 
                 {/* Voice Verification */}
-                {userDetails.voice && (
+                {userDetails.voice_profile && (
                   <div className="mb-6 bg-purple-50 rounded-lg p-4">
                     <h3 className="text-lg font-semibold mb-3 flex items-center">
                       <Volume2 size={20} className="mr-2 text-purple-600" />
-                      Voice Biometric Profile
+                      Voice Verification
                     </h3>
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <span className="text-gray-600">Enrollment Status:</span>
-                          <p className="font-medium text-purple-900">
-                            {userDetails.voice.is_enrolled ? '✓ Enrolled' : '✗ Not Enrolled'}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Samples Count:</span>
-                          <p className="font-medium text-purple-900">
-                            {userDetails.voice.enrollment_samples_count || 0} samples
-                          </p>
-                        </div>
-                        {userDetails.voice.last_match_score && (
-                          <div>
-                            <span className="text-gray-600">Last Match Score:</span>
-                            <p className="font-medium text-purple-900">
-                              {(userDetails.voice.last_match_score * 100).toFixed(1)}%
-                            </p>
-                          </div>
-                        )}
-                        {userDetails.voice.total_verifications && (
-                          <div>
-                            <span className="text-gray-600">Total Verifications:</span>
-                            <p className="font-medium text-purple-900">
-                              {userDetails.voice.total_verifications}
-                            </p>
-                          </div>
-                        )}
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Status:</span>
+                        <span className="font-medium text-purple-600">
+                          {userDetails.voice_profile.is_verified ? 'Verified' : 'Pending'}
+                        </span>
                       </div>
-                      {userDetails.voice.last_verification_date && (
-                        <div className="text-sm">
-                          <span className="text-gray-600">Last Verification:</span>
-                          <p className="font-medium text-purple-900">
-                            {new Date(userDetails.voice.last_verification_date).toLocaleString()}
-                          </p>
+                      {userDetails.voice_profile.confidence_score && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Confidence Score:</span>
+                          <span className="font-medium">
+                            {(userDetails.voice_profile.confidence_score * 100).toFixed(1)}%
+                          </span>
                         </div>
                       )}
-                      {userDetails.voice.audio_url && (
-                        <div className="mt-3">
-                          <label className="text-sm text-gray-600 block mb-2">Voice Sample:</label>
+                      {userDetails.voice_profile.audio_url && (
+                        <div className="mt-2">
                           <audio controls className="w-full">
-                            <source src={userDetails.voice.audio_url} type="audio/mpeg" />
-                            Your browser does not support the audio element.
+                            <source src={userDetails.voice_profile.audio_url} type="audio/mpeg" />
                           </audio>
                         </div>
                       )}
@@ -615,7 +536,7 @@ export default function AdminUsersPage() {
                   <div className="mb-6 bg-indigo-50 rounded-lg p-4">
                     <h3 className="text-lg font-semibold mb-3 flex items-center">
                       <FileText size={20} className="mr-2 text-indigo-600" />
-                      Identity Documents ({userDetails.documents.length})
+                      Documents
                     </h3>
                     <div className="space-y-3">
                       {userDetails.documents.map((doc) => (
@@ -623,107 +544,28 @@ export default function AdminUsersPage() {
                           <div className="flex justify-between items-start mb-2">
                             <div>
                               <span className="font-medium text-gray-900 capitalize">
-                                {(doc.type || 'Document').replace('_', ' ')}
+                                {doc.document_type.replace('_', ' ')}
                               </span>
                               {doc.is_verified && (
                                 <CheckCircle size={16} className="inline ml-2 text-green-600" />
                               )}
-                              {doc.tamper_flag && (
-                                <span className="inline-flex items-center ml-2 px-2 py-0.5 text-xs font-medium rounded bg-red-100 text-red-800">
-                                  ⚠ Tamper Detected
-                                </span>
-                              )}
                             </div>
                             <span className="text-xs text-gray-500">
-                              {new Date(doc.uploaded_at || doc.created_at).toLocaleDateString()}
+                              {new Date(doc.created_at).toLocaleDateString()}
                             </span>
                           </div>
-                          {doc.extracted_text && (
-                            <div className="mb-2 p-2 bg-gray-50 rounded text-xs">
-                              <strong className="text-gray-700">Extracted Text:</strong>
-                              <p className="text-gray-600 mt-1">{doc.extracted_text}</p>
-                            </div>
-                          )}
-                          {doc.url && (
+                          {doc.document_url && (
                             <div className="mt-2">
                               <img 
-                                src={doc.url} 
-                                alt={doc.type || 'Document'}
-                                className="w-full rounded border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => window.open(doc.url, '_blank')}
+                                src={doc.document_url} 
+                                alt={doc.document_type}
+                                className="w-full rounded border border-gray-200"
                               />
                             </div>
                           )}
                           {doc.verification_notes && (
-                            <div className="mt-2 p-2 bg-yellow-50 rounded text-sm">
-                              <strong className="text-yellow-800">Admin Notes:</strong>
-                              <p className="text-yellow-700 mt-1">{doc.verification_notes}</p>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Verification Requests History */}
-                {userDetails.verifications && userDetails.verifications.length > 0 && (
-                  <div className="mb-6 bg-green-50 rounded-lg p-4">
-                    <h3 className="text-lg font-semibold mb-3 flex items-center">
-                      <CheckCircle size={20} className="mr-2 text-green-600" />
-                      Verification History ({userDetails.verifications.length})
-                    </h3>
-                    <div className="space-y-3">
-                      {userDetails.verifications.map((verification) => (
-                        <div key={verification.id} className="bg-white rounded-lg p-3 border border-green-100">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
-                                verification.status === 'approved' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : verification.status === 'rejected'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {verification.status === 'approved' && <CheckCircle size={12} className="mr-1" />}
-                                {verification.status === 'rejected' && <XCircle size={12} className="mr-1" />}
-                                <span className="capitalize">{verification.status}</span>
-                              </span>
-                            </div>
-                            <span className="text-xs text-gray-500">
-                              {new Date(verification.created_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                          {verification.voice_match_score && (
-                            <div className="text-sm text-gray-700 mb-1">
-                              <strong>Voice Match:</strong> {(verification.voice_match_score * 100).toFixed(1)}%
-                            </div>
-                          )}
-                          <div className="grid grid-cols-2 gap-2 mt-2">
-                            {verification.liveness_image_url && (
-                              <div>
-                                <p className="text-xs text-gray-600 mb-1">Liveness Check</p>
-                                <img 
-                                  src={verification.liveness_image_url} 
-                                  alt="Liveness"
-                                  className="w-full rounded border border-gray-200"
-                                />
-                              </div>
-                            )}
-                            {verification.document_url && (
-                              <div>
-                                <p className="text-xs text-gray-600 mb-1">Document</p>
-                                <img 
-                                  src={verification.document_url} 
-                                  alt="Document"
-                                  className="w-full rounded border border-gray-200"
-                                />
-                              </div>
-                            )}
-                          </div>
-                          {verification.notes && (
                             <div className="mt-2 text-sm text-gray-600">
-                              <strong>Notes:</strong> {verification.notes}
+                              <strong>Notes:</strong> {doc.verification_notes}
                             </div>
                           )}
                         </div>

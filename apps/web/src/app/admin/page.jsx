@@ -35,23 +35,25 @@ export default function AdminDashboard() {
 
   const checkAuth = async () => {
     try {
-      console.log("[ADMIN DASHBOARD] Checking authentication...");
-      const response = await fetch("/api/admin/auth/check");
+      console.log("[Dashboard] Checking authentication...");
+      const response = await fetch("/api/admin/auth/check", {
+        credentials: "include",
+      });
       const result = await response.json();
-      console.log("[ADMIN DASHBOARD] Auth check result:", result);
+      console.log("[Dashboard] Auth check result:", result);
 
       if (!result.success || !result.isAdmin) {
-        console.log("[ADMIN DASHBOARD] Not authenticated or not admin, redirecting to signin");
+        console.log("[Dashboard] Not authenticated or not admin, redirecting to signin");
         navigate("/admin/signin");
         return;
       }
 
-      console.log("[ADMIN DASHBOARD] Authentication successful");
+      console.log("[Dashboard] Authentication successful");
       setIsSuperAdmin(result.isSuperAdmin || false);
       setIsCheckingAuth(false);
       loadVerificationRequests();
     } catch (error) {
-      console.error("[ADMIN DASHBOARD] Auth check failed:", error);
+      console.error("[Dashboard] Auth check failed:", error);
       navigate("/admin/signin");
     }
   };
@@ -59,23 +61,23 @@ export default function AdminDashboard() {
   const loadVerificationRequests = async () => {
     setIsLoading(true);
     try {
-      console.log("[DASHBOARD] Fetching verification requests...");
-      const response = await fetch("/api/admin/verifications");
+      console.log("[Dashboard] Loading verification requests...");
+      const response = await fetch("/api/admin/verifications", {
+        credentials: "include",
+      });
       const result = await response.json();
-      console.log("[DASHBOARD] Received data:", result);
+      console.log("[Dashboard] Verification API response:", result);
 
       if (result.success && result.data && result.data.verifications) {
-        console.log("[DASHBOARD] Setting", result.data.verifications.length, "verification requests");
-        console.log("[DASHBOARD] First request:", result.data.verifications[0]);
+        console.log("[Dashboard] Loaded", result.data.verifications.length, "verification requests");
         setVerificationRequests(result.data.verifications);
       } else {
-        // If no data, keep empty array
-        console.log("[DASHBOARD] No verification data received");
+        console.log("[Dashboard] No verifications found or API error");
         setVerificationRequests([]);
       }
     } catch (error) {
-      console.error("[DASHBOARD] Error loading verification requests:", error);
-      setVerificationRequests([]); // Ensure it's always an array
+      console.error("[Dashboard] Error loading verification requests:", error);
+      setVerificationRequests([]);
     } finally {
       setIsLoading(false);
     }
@@ -155,10 +157,12 @@ export default function AdminDashboard() {
     ? verificationRequests.filter((request) => {
         const matchesFilter = filter === "all" || request.status === filter;
         const matchesSearch =
-          searchTerm === '' ||
-          request.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          request.user?.name
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
           request.user?.phone?.includes(searchTerm) ||
-          request.user?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+          request.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          request.user_phone?.includes(searchTerm);
 
         return matchesFilter && matchesSearch;
       })
@@ -276,6 +280,20 @@ export default function AdminDashboard() {
                 <RefreshCw size={16} className="mr-2" />
                 Refresh
               </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await fetch("/api/auth/signout", { method: "POST", credentials: "include" });
+                    window.location.href = "/admin/signin";
+                  } catch (error) {
+                    console.error("Logout error:", error);
+                    window.location.href = "/admin/signin";
+                  }
+                }}
+                className="inline-flex items-center px-4 py-2 border border-red-300 bg-red-50 rounded-md shadow-sm text-sm font-medium text-red-700 hover:bg-red-100"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>
@@ -367,10 +385,10 @@ export default function AdminDashboard() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div>
                               <div className="text-sm font-medium text-gray-900">
-                                {request.user?.name || request.user_name || 'Unknown User'}
+                                {request.user_name}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {request.user?.phone || request.user_phone || '-'}
+                                {request.user_phone}
                               </div>
                             </div>
                           </td>

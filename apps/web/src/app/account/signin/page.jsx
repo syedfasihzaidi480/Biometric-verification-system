@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useAuth from "@/utils/useAuth";
 
 export default function SignInPage() {
@@ -10,6 +10,22 @@ export default function SignInPage() {
   const [password, setPassword] = useState("");
 
   const { signInWithCredentials } = useAuth();
+
+  // If this generic sign-in page is reached with a callbackUrl to /admin,
+  // send the user to the dedicated Admin sign-in flow which performs
+  // role checks and posts to Auth.js accordingly.
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const callbackUrl = params.get("callbackUrl") || "";
+      // Accept both absolute and relative URLs
+      const decoded = decodeURIComponent(callbackUrl);
+      if (decoded.includes("/admin")) {
+        const redirectTo = "/admin/signin" + (callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : "");
+        window.location.replace(redirectTo);
+      }
+    } catch {}
+  }, []);
 
   const onSubmit = async (e) => {
     e.preventDefault();

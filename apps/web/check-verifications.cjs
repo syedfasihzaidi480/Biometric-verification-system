@@ -16,52 +16,47 @@ envContent.split('\n').forEach(line => {
 const MONGODB_URI = envVars.MONGODB_URI;
 
 async function checkVerifications() {
-  console.log('Checking verification requests...\n');
-  
   const client = new MongoClient(MONGODB_URI);
-
+  
   try {
     await client.connect();
-    console.log('✓ Connected to MongoDB\n');
-
+    console.log('✅ Connected to MongoDB\n');
+    
     const db = client.db('auth');
-    const verifications = db.collection('verification_requests');
-    const users = db.collection('users');
-
-    // Get all verifications
-    const allVerifications = await verifications.find().toArray();
-    console.log(`Total verification requests: ${allVerifications.length}\n`);
-
-    // Check each verification
-    for (const ver of allVerifications) {
-      console.log('─'.repeat(60));
-      console.log(`Verification ID: ${ver.id}`);
-      console.log(`User ID: ${ver.user_id}`);
-      console.log(`Status: ${ver.status}`);
-      console.log(`Voice Score: ${ver.voice_match_score || 'N/A'}`);
-      
-      // Find the user
-      const user = await users.findOne({ id: ver.user_id });
-      if (user) {
-        console.log(`✓ User Found: ${user.name} (${user.email})`);
-      } else {
-        console.log(`✗ User NOT Found for user_id: ${ver.user_id}`);
-      }
-      console.log('');
+    
+    // Check verification requests
+    const verifications = await db.collection('verification_requests').find({}).toArray();
+    console.log('📋 Verification Requests:', verifications.length);
+    
+    if (verifications.length > 0) {
+      console.log('\n='.repeat(60));
+      verifications.forEach((v, i) => {
+        console.log(`\n${i + 1}. Verification Request`);
+        console.log('   ID:', v.id);
+        console.log('   User ID:', v.user_id);
+        console.log('   Status:', v.status);
+        console.log('   Voice Score:', v.voice_match_score);
+        console.log('   Created:', v.created_at);
+      });
+    } else {
+      console.log('\n⚠️  No verification requests found');
     }
-
-    console.log('═'.repeat(60));
-    console.log('\nAll Users in Database:');
-    const allUsers = await users.find().toArray();
-    for (const user of allUsers) {
-      console.log(`- ${user.name} | ID: ${user.id} | Email: ${user.email}`);
-    }
-
-  } catch (error) {
-    console.error('Error:', error);
-  } finally {
+    
+    // Check users
+    const users = await db.collection('users').find({}).toArray();
+    console.log('\n\n👥 Total Users:', users.length);
+    
+    // Check voice profiles
+    const voiceProfiles = await db.collection('voice_profiles').find({}).toArray();
+    console.log('🎤 Voice Profiles:', voiceProfiles.length);
+    
+    // Check documents
+    const documents = await db.collection('documents').find({}).toArray();
+    console.log('📄 Documents:', documents.length);
+    
     await client.close();
-    console.log('\n✓ Disconnected from MongoDB');
+  } catch (error) {
+    console.error('❌ Error:', error.message);
   }
 }
 

@@ -91,10 +91,12 @@ app.use(
     basePath: '/api/auth',
     trustHost: true,
     pages: {
-      signIn: '/account/signin',
-      signOut: '/account/logout',
+      // Route all sign-in flows to the Admin sign-in so role checks run
+      signIn: '/admin/signin',
+      signOut: '/admin/signin',
     },
-    skipCSRFCheck,
+  // Use Auth.js sentinel to disable CSRF protection (already imported)
+  skipCSRFCheck,
     session: { strategy: 'jwt' },
     callbacks: {
       session({ session, token }) {
