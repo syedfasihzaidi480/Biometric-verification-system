@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/utils/auth/useAuth';
 import { apiFetchJson } from '@/utils/api';
 import { CheckCircle, Clock, Mic, Camera, FileText, ArrowRight } from 'lucide-react-native';
@@ -19,16 +20,22 @@ export default function VerifyScreen() {
   const { isAuthenticated, signIn } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const profileRef = useRef(null);
+  const lastFetchedAtRef = useRef(0);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchProfile();
-    } else {
-      setLoading(false);
-    }
-  }, [isAuthenticated]);
+    profileRef.current = profile;
+  }, [profile]);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastFetchedAtRef.current < 10000) {
+      return; // avoid spamming server on rapid tab changes
+    }
+    lastFetchedAtRef.current = now;
+    if (!profileRef.current) {
+      setLoading(true);
+    }
     try {
       const result = await apiFetchJson('/api/profile');
       if (result?.success) {
@@ -39,66 +46,87 @@ export default function VerifyScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchProfile();
+    } else {
+      setProfile(null);
+      profileRef.current = null;
+      setLoading(false);
+    }
+  }, [isAuthenticated, fetchProfile]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        fetchProfile();
+      }
+    }, [isAuthenticated, fetchProfile]),
+  );
 
   const getVerificationSteps = () => {
-    if (!profile) {
-      return [
-        {
-          id: 'voice',
-          title: 'Voice Verification',
-          description: 'Record your voice for verification',
-          status: 'not_started',
-          route: '/(stack)/voice-verification',
-        },
-        {
-          id: 'face',
-          title: 'Face Verification',
-          description: 'Take a selfie for facial recognition',
-          status: 'not_started',
-          route: '/(stack)/face-verification',
-        },
-        {
-          id: 'document',
-          title: 'Document Verification',
-          description: 'Upload your ID document',
-          status: 'not_started',
-          route: '/(stack)/document-verification',
-        },
-      ];
-    }
-
-    return [
+    const steps = [
       {
         id: 'voice',
         title: 'Voice Verification',
         description: 'Record your voice for verification',
-        status: profile.voice_verified ? 'verified' : 'not_started',
-        route: '/(stack)/voice-verification',
+        status: 'not_started',
+        route: '/voice-verification',
       },
       {
         id: 'face',
         title: 'Face Verification',
         description: 'Take a selfie for facial recognition',
-        status: profile.face_verified
-          ? 'verified'
-          : profile.voice_verified
-          ? 'available'
-          : 'not_started',
-        route: '/(stack)/face-verification',
+        status: 'not_started',
+        route: '/liveness-check',
       },
       {
         id: 'document',
         title: 'Document Verification',
         description: 'Upload your ID document',
-        status: profile.document_verified
-          ? 'verified'
-          : profile.face_verified
-          ? 'available'
-          : 'not_started',
-        route: '/(stack)/document-verification',
+        status: 'not_started',
+        route: '/document-upload',
       },
     ];
+
+    if (!profile) {
+      return steps;
+    }
+
+    return steps.map((step) => {
+      if (step.id === 'voice') {
+        return {
+          ...step,
+          status: profile.voice_verified ? 'verified' : 'available',
+        };
+      }
+
+      if (step.id === 'face') {
+        return {
+          ...step,
+          status: profile.face_verified
+            ? 'verified'
+            : profile.voice_verified
+            ? 'available'
+            : 'not_started',
+        };
+      }
+
+      if (step.id === 'document') {
+        return {
+          ...step,
+          status: profile.document_verified
+            ? 'verified'
+            : profile.face_verified
+            ? 'available'
+            : 'not_started',
+        };
+      }
+
+      return step;
+    });
   };
 
   const getStatusIcon = (status) => {

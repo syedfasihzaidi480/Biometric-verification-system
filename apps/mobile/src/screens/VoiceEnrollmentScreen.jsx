@@ -8,6 +8,7 @@ import {
   Alert,
   Modal,
   Animated,
+  Linking,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,11 +24,14 @@ import { Audio } from "expo-audio";
 import { useTranslation } from "@/i18n/useTranslation";
 import { useUpload } from "@/utils/useUpload";
 import { apiFetch, apiFetchJson } from "@/utils/api";
+import useUser from "@/utils/auth/useUser";
 
 export default function VoiceEnrollmentScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { userId, userName, dateOfBirth } = useLocalSearchParams();
+  const { user } = useUser();
+  const { userId: paramUserId, userName, dateOfBirth } = useLocalSearchParams();
+  const userId = paramUserId || user?.id;
   const [upload, { loading: uploadLoading }] = useUpload();
 
   const [currentSample, setCurrentSample] = useState(1);
@@ -114,6 +118,10 @@ export default function VoiceEnrollmentScreen() {
           [
             { text: t("common.cancel"), style: "cancel" },
             { text: t("permissions.allowAccess"), onPress: requestPermissions },
+            {
+              text: t("permissions.openSettings"),
+              onPress: () => Linking.openSettings(),
+            },
           ],
         );
       }

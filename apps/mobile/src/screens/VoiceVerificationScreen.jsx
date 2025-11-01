@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   Animated,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,11 +16,14 @@ import { ArrowLeft, Mic, Square, RotateCcw, CheckCircle, Volume2 } from 'lucide-
 import { Audio } from 'expo-audio';
 import { useTranslation } from '@/i18n/useTranslation';
 import { apiFetch } from '@/utils/api';
+import useUser from '@/utils/auth/useUser';
 
 export default function VoiceVerificationScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { userId, userName, dateOfBirth, returnUrl = "/dashboard" } = useLocalSearchParams();
+  const { user } = useUser();
+  const { userId: paramUserId, userName, dateOfBirth, returnUrl = "/dashboard" } = useLocalSearchParams();
+  const userId = paramUserId || user?.id;
   
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -87,7 +91,8 @@ export default function VoiceVerificationScreen() {
           t('permissions.microphone.message'),
           [
             { text: t('common.cancel'), style: 'cancel' },
-            { text: t('permissions.allowAccess'), onPress: requestPermissions }
+            { text: t('permissions.allowAccess'), onPress: requestPermissions },
+            { text: t('permissions.openSettings'), onPress: () => Linking.openSettings() }
           ]
         );
       }
@@ -184,7 +189,7 @@ export default function VoiceVerificationScreen() {
     try {
       // Create form data for upload
       const formData = new FormData();
-      formData.append('userId', userId);
+  formData.append('userId', String(userId));
       formData.append('expectedPhrase', verificationPhrase);
       formData.append('audioFile', {
         uri: audioUri,

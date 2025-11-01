@@ -1,5 +1,5 @@
-import sql from '@/app/api/utils/sql';
 import { upload } from '@/app/api/utils/upload';
+import { getMongoDb } from '@/app/api/utils/mongo';
 
 /**
  * Voice enrollment endpoint
@@ -24,12 +24,15 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Verify user exists
-    const user = await sql`
-      SELECT id, name, preferred_language FROM users WHERE id = ${userId}
-    `;
+    const db = await getMongoDb();
+    const users = db.collection('users');
+    const sessionsCollection = db.collection('voice_enrollment_sessions');
+    const voiceProfiles = db.collection('voice_profiles');
+    const auditLogs = db.collection('audit_logs');
 
-    if (user.length === 0) {
+    const user = await users.findOne({ id: userId });
+
+    if (!user) {
       return Response.json({
         success: false,
         error: {
@@ -39,40 +42,36 @@ export async function POST(request) {
       }, { status: 404 });
     }
 
-    // Get or create enrollment session
-    let session;
+    const now = new Date();
+    const nowIso = now.toISOString();
+
+    let session = null;
     if (sessionToken) {
-      // Check existing session
-      const existingSessions = await sql`
-        SELECT * FROM voice_enrollment_sessions 
-        WHERE session_token = ${sessionToken} 
-        AND user_id = ${userId}
-        AND status = 'active'
-        AND expires_at > NOW()
-      `;
-      
-      if (existingSessions.length > 0) {
-        session = existingSessions[0];
-      }
+      session = await sessionsCollection.findOne({
+        session_token: sessionToken,
+        user_id: userId,
+        status: 'active',
+        expires_at: { $gt: nowIso },
+      });
     }
 
     if (!session) {
-      // Create new session
-      const newSessionToken = `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
-      
-      const newSessions = await sql`
-        INSERT INTO voice_enrollment_sessions (
-          user_id, 
-          session_token, 
-          expires_at, 
-          status
-        )
-        VALUES (${userId}, ${newSessionToken}, ${expiresAt}, 'active')
-        RETURNING *
-      `;
-      
-      session = newSessions[0];
+      const newSessionToken = `sess_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      const sessionId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+      const expiresAtIso = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
+      const sessionDoc = {
+        id: sessionId,
+        user_id: userId,
+        session_token: newSessionToken,
+        status: 'active',
+        samples_required: 3,
+        samples_recorded: 0,
+        expires_at: expiresAtIso,
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+      await sessionsCollection.insertOne(sessionDoc);
+      session = sessionDoc;
     }
 
     // Upload audio file
@@ -105,42 +104,70 @@ export async function POST(request) {
     }
 
     // Update session with new sample
-    const updatedSamples = session.samples_recorded + 1;
-    const isComplete = updatedSamples >= session.samples_required;
-    
-    await sql`
-      UPDATE voice_enrollment_sessions 
-      SET samples_recorded = ${updatedSamples},
-          status = ${isComplete ? 'completed' : 'active'},
-          updated_at = NOW()
-      WHERE id = ${session.id}
-    `;
+    const samplesRequired = session.samples_required ?? 3;
+    const currentSamples = session.samples_recorded ?? 0;
+    const updatedSamples = currentSamples + 1;
+    const isComplete = updatedSamples >= samplesRequired;
 
-    // If enrollment is complete, update voice profile
+    await sessionsCollection.updateOne(
+      { id: session.id },
+      {
+        $set: {
+          samples_recorded: updatedSamples,
+          status: isComplete ? 'completed' : 'active',
+          updated_at: new Date().toISOString(),
+        },
+      }
+    );
+
+    session = {
+      ...session,
+      samples_recorded: updatedSamples,
+      status: isComplete ? 'completed' : 'active',
+    };
+
+    await voiceProfiles.updateOne(
+      { user_id: userId },
+      {
+        $setOnInsert: {
+          id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()),
+          user_id: userId,
+          voice_model_ref: null,
+          enrollment_samples_count: 0,
+          is_enrolled: false,
+          last_match_score: null,
+          created_at: nowIso,
+        },
+        $set: { updated_at: new Date().toISOString() },
+      },
+      { upsert: true }
+    );
+
     if (isComplete) {
-      await sql`
-        UPDATE voice_profiles 
-        SET voice_model_ref = ${mlResponse.data.modelId},
-            enrollment_samples_count = ${updatedSamples},
-            is_enrolled = true,
-            updated_at = NOW()
-        WHERE user_id = ${userId}
-      `;
+      await voiceProfiles.updateOne(
+        { user_id: userId },
+        {
+          $set: {
+            voice_model_ref: mlResponse.data.modelId,
+            enrollment_samples_count: updatedSamples,
+            is_enrolled: true,
+            last_match_score: mlResponse.data.matchScore || null,
+            updated_at: new Date().toISOString(),
+          },
+        }
+      );
 
-      // Log successful enrollment
-      await sql`
-        INSERT INTO audit_logs (user_id, action, details, ip_address)
-        VALUES (
-          ${userId}, 
-          'VOICE_ENROLLED',
-          ${JSON.stringify({ 
-            sessionId: session.id,
-            samplesCount: updatedSamples,
-            modelId: mlResponse.data.modelId
-          })},
-          ${request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'}
-        )
-      `;
+      await auditLogs.insertOne({
+        user_id: userId,
+        action: 'VOICE_ENROLLED',
+        details: {
+          sessionId: session.id,
+          samplesCount: updatedSamples,
+          modelId: mlResponse.data.modelId,
+        },
+        ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        created_at: new Date().toISOString(),
+      });
     }
 
     return Response.json({
@@ -148,7 +175,7 @@ export async function POST(request) {
       data: {
         sessionToken: session.session_token,
         samplesRecorded: updatedSamples,
-        samplesRequired: session.samples_required,
+        samplesRequired: samplesRequired,
         isComplete: isComplete,
         matchScore: mlResponse.data.matchScore || null,
         nextStep: isComplete ? 'voice_login' : 'continue_enrollment'

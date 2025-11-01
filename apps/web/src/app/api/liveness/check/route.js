@@ -1,5 +1,5 @@
-import sql from '@/app/api/utils/sql';
 import { upload } from '@/app/api/utils/upload';
+import { getMongoDb } from '@/app/api/utils/mongo';
 
 /**
  * Liveness detection endpoint
@@ -23,12 +23,14 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Verify user exists
-    const user = await sql`
-      SELECT id, name, preferred_language FROM users WHERE id = ${userId}
-    `;
+    const db = await getMongoDb();
+    const users = db.collection('users');
+    const verificationRequests = db.collection('verification_requests');
+    const auditLogs = db.collection('audit_logs');
 
-    if (user.length === 0) {
+    const user = await users.findOne({ id: userId });
+
+    if (!user) {
       return Response.json({
         success: false,
         error: {
@@ -94,47 +96,48 @@ export async function POST(request) {
     const threshold = 0.7; // Configurable threshold
 
     // Create or update verification request
-    let verificationRequest = await sql`
-      SELECT id FROM verification_requests 
-      WHERE user_id = ${userId} AND status = 'pending'
-      ORDER BY created_at DESC 
-      LIMIT 1
-    `;
+    const nowIso = new Date().toISOString();
+    const existingPending = await verificationRequests
+      .find({ user_id: userId, status: 'pending' })
+      .sort({ created_at: -1 })
+      .limit(1)
+      .toArray();
 
-    if (verificationRequest.length === 0) {
-      // Create new verification request
-      const newRequest = await sql`
-        INSERT INTO verification_requests (user_id, liveness_image_url, status)
-        VALUES (${userId}, ${uploadResult.url}, 'pending')
-        RETURNING id
-      `;
-      verificationRequest = newRequest;
+    let verificationRequest;
+    if (existingPending.length === 0) {
+      const reqId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+      const reqDoc = {
+        id: reqId,
+        user_id: userId,
+        liveness_image_url: uploadResult.url,
+        status: 'pending',
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+      await verificationRequests.insertOne(reqDoc);
+      verificationRequest = reqDoc;
     } else {
-      // Update existing verification request
-      await sql`
-        UPDATE verification_requests 
-        SET liveness_image_url = ${uploadResult.url},
-            updated_at = NOW()
-        WHERE id = ${verificationRequest[0].id}
-      `;
+      const pending = existingPending[0];
+      await verificationRequests.updateOne(
+        { id: pending.id },
+        { $set: { liveness_image_url: uploadResult.url, updated_at: nowIso } }
+      );
+      verificationRequest = { ...pending, liveness_image_url: uploadResult.url, updated_at: nowIso };
     }
 
-    // Log liveness check
-    await sql`
-      INSERT INTO audit_logs (user_id, action, details, ip_address)
-      VALUES (
-        ${userId}, 
-        'LIVENESS_CHECK',
-        ${JSON.stringify({ 
-          livenessScore: livenessScore,
-          isLive: isLive,
-          threshold: threshold,
-          imageUrl: uploadResult.url,
-          verificationRequestId: verificationRequest[0].id
-        })},
-        ${request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'}
-      )
-    `;
+    await auditLogs.insertOne({
+      user_id: userId,
+      action: 'LIVENESS_CHECK',
+      details: {
+        livenessScore: livenessScore,
+        isLive: isLive,
+        threshold: threshold,
+        imageUrl: uploadResult.url,
+        verificationRequestId: verificationRequest.id,
+      },
+      ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      created_at: new Date().toISOString(),
+    });
 
     if (isLive && livenessScore >= threshold) {
       // Successful liveness check
@@ -145,7 +148,7 @@ export async function POST(request) {
           livenessScore: livenessScore,
           confidence: mlResponse.data.confidence || 'high',
           imageUrl: uploadResult.url,
-          verificationRequestId: verificationRequest[0].id,
+          verificationRequestId: verificationRequest.id,
           nextStep: 'document_upload',
           message: 'Liveness verification successful'
         }

@@ -1,5 +1,21 @@
-import sql from '@/app/api/utils/sql';
 import { upload } from '@/app/api/utils/upload';
+import { auth } from '@/auth';
+import { getMongoDb } from '@/app/api/utils/mongo';
+
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/jpg',
+  'image/heic',
+  'image/heif',
+];
+
+function isMimeTypeAllowed(mimeType) {
+  if (!mimeType) return true;
+  if (mimeType.startsWith('image/')) return true;
+  return ALLOWED_MIME_TYPES.includes(mimeType.toLowerCase());
+}
 
 /**
  * Document upload endpoint
@@ -9,56 +25,131 @@ import { upload } from '@/app/api/utils/upload';
  */
 export async function POST(request) {
   try {
-    const formData = await request.formData();
-    const userId = formData.get('userId');
-    const documentFile = formData.get('documentFile');
-    const documentType = formData.get('documentType') || 'id_card';
-    
-    if (!userId || !documentFile) {
-      return Response.json({
+    const session = await auth();
+    if (!session || !session.user?.id) {
+      return Response.json({ 
         success: false,
-        error: {
-          code: 'MISSING_REQUIRED_FIELDS',
-          message: 'User ID and document file are required'
-        }
-      }, { status: 400 });
+        error: { code: 'UNAUTHORIZED', message: 'Authentication required' }
+      }, { status: 401 });
     }
 
-    // Verify user exists
-    const user = await sql`
-      SELECT id, name, preferred_language FROM users WHERE id = ${userId}
-    `;
+    const authUserId = session.user.id;
+    let documentType = 'id_card';
+    let uploadResult = null;
+    let uploadedFileMeta = { mimeType: null, fileName: null };
 
-    if (user.length === 0) {
-      return Response.json({
-        success: false,
-        error: {
-          code: 'USER_NOT_FOUND',
-          message: 'User not found'
-        }
-      }, { status: 404 });
+    // Support both multipart/form-data and JSON bodies (base64 or URL)
+    const contentType = request.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const body = await request.json();
+      documentType = body.documentType || 'id_card';
+      const mimeType = typeof body.documentMimeType === 'string' ? body.documentMimeType : null;
+      const fileName = typeof body.documentFileName === 'string' ? body.documentFileName : null;
+
+      if (mimeType && !isMimeTypeAllowed(mimeType)) {
+        return Response.json({
+          success: false,
+          error: {
+            code: 'INVALID_FILE_TYPE',
+            message: 'Unsupported document format. Please upload an image or PDF file.',
+          },
+        }, { status: 400 });
+      }
+
+      if (body.documentBase64) {
+        uploadResult = await upload({ base64: body.documentBase64 });
+        uploadedFileMeta = {
+          mimeType: mimeType || uploadResult?.mimeType || null,
+          fileName: fileName || null,
+        };
+      } else if (body.documentUrl) {
+        uploadResult = await upload({ url: body.documentUrl });
+        uploadedFileMeta = {
+          mimeType: mimeType || uploadResult?.mimeType || null,
+          fileName: fileName || null,
+        };
+      } else {
+        return Response.json({
+          success: false,
+          error: { code: 'MISSING_REQUIRED_FIELDS', message: 'documentBase64 or documentUrl is required' }
+        }, { status: 400 });
+      }
+    } else {
+      // Multipart form-data path (mobile clients may send files this way)
+      const formData = await request.formData();
+      const documentFile = formData.get('documentFile');
+      documentType = formData.get('documentType') || 'id_card';
+
+      if (!documentFile) {
+        return Response.json({
+          success: false,
+          error: {
+            code: 'MISSING_REQUIRED_FIELDS',
+            message: 'Document file is required'
+          }
+        }, { status: 400 });
+      }
+
+      // Validate document file
+      if (!isMimeTypeAllowed(documentFile.type)) {
+        return Response.json({
+          success: false,
+          error: {
+            code: 'INVALID_FILE_TYPE',
+            message: 'Document must be an image or PDF'
+          }
+        }, { status: 400 });
+      }
+
+      // Check file size (max 15MB for documents)
+      if (documentFile.size > 15 * 1024 * 1024) {
+        return Response.json({
+          success: false,
+          error: {
+            code: 'FILE_TOO_LARGE',
+            message: 'Document file must be less than 15MB'
+          }
+        }, { status: 400 });
+      }
+
+      // Upload document file
+      const documentBuffer = Buffer.from(await documentFile.arrayBuffer());
+      uploadResult = await upload({ buffer: documentBuffer });
+      uploadedFileMeta = {
+        mimeType: documentFile.type || uploadResult?.mimeType || null,
+        fileName: documentFile.name || null,
+      };
     }
 
-    // Validate document file
-    if (!documentFile.type.startsWith('image/')) {
-      return Response.json({
-        success: false,
-        error: {
-          code: 'INVALID_FILE_TYPE',
-          message: 'Document must be an image file'
-        }
-      }, { status: 400 });
-    }
+    const db = await getMongoDb();
+    const users = db.collection('users');
+    const documents = db.collection('documents');
+    const verificationRequests = db.collection('verification_requests');
+    const auditLogs = db.collection('audit_logs');
 
-    // Check file size (max 15MB for documents)
-    if (documentFile.size > 15 * 1024 * 1024) {
-      return Response.json({
-        success: false,
-        error: {
-          code: 'FILE_TOO_LARGE',
-          message: 'Document file must be less than 15MB'
-        }
-      }, { status: 400 });
+    let user = await users.findOne({ auth_user_id: authUserId });
+    if (!user) {
+      const now = new Date().toISOString();
+      const doc = {
+        id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()),
+        auth_user_id: authUserId,
+        name: session.user.name || '',
+        email: session.user.email || '',
+        phone: null,
+        date_of_birth: null,
+        preferred_language: 'en',
+        role: 'user',
+        profile_completed: false,
+        voice_verified: false,
+        face_verified: false,
+        document_verified: false,
+        admin_approved: false,
+        payment_released: false,
+        created_at: now,
+        updated_at: now,
+      };
+      await users.insertOne(doc);
+      user = doc;
     }
 
     // Validate document type
@@ -73,10 +164,6 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Upload document file
-    const documentBuffer = Buffer.from(await documentFile.arrayBuffer());
-    const uploadResult = await upload({ buffer: documentBuffer });
-    
     if (uploadResult.error) {
       return Response.json({
         success: false,
@@ -89,7 +176,7 @@ export async function POST(request) {
     }
 
     // Call ML service for document verification
-    const mlResponse = await callMLDocumentService(uploadResult.url, documentType, userId);
+    const mlResponse = await callMLDocumentService(uploadResult.url, documentType, user.id);
     
     if (!mlResponse.success) {
       return Response.json({
@@ -102,67 +189,67 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
-    // Store document information
-    const document = await sql`
-      INSERT INTO documents (
-        user_id, 
-        document_type, 
-        document_text, 
-        document_image_url, 
-        tamper_flag
-      )
-      VALUES (
-        ${userId}, 
-        ${documentType}, 
-        ${mlResponse.data.extractedText || null}, 
-        ${uploadResult.url}, 
-        ${mlResponse.data.tamperDetected || false}
-      )
-      RETURNING id, created_at
-    `;
+  let document;
+  let verificationRequest;
 
-    // Update verification request
-    let verificationRequest = await sql`
-      SELECT id FROM verification_requests 
-      WHERE user_id = ${userId} AND status = 'pending'
-      ORDER BY created_at DESC 
-      LIMIT 1
-    `;
+  const nowIso = new Date().toISOString();
+    const documentId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+    const docData = {
+      id: documentId,
+      user_id: user.id,
+      document_type: documentType,
+      document_text: mlResponse.data.extractedText || null,
+      document_image_url: uploadResult.url,
+      tamper_flag: mlResponse.data.tamperDetected || false,
+      mime_type: uploadedFileMeta.mimeType,
+      original_file_name: uploadedFileMeta.fileName,
+      created_at: nowIso,
+    };
+    await documents.insertOne(docData);
+    document = docData;
 
-    if (verificationRequest.length === 0) {
-      // Create new verification request
-      const newRequest = await sql`
-        INSERT INTO verification_requests (user_id, document_url, status)
-        VALUES (${userId}, ${uploadResult.url}, 'pending')
-        RETURNING id
-      `;
-      verificationRequest = newRequest;
+    const existingPending = await verificationRequests
+      .find({ user_id: user.id, status: 'pending' })
+      .sort({ created_at: -1 })
+      .limit(1)
+      .toArray();
+
+    const pendingRequest = existingPending[0];
+    if (!pendingRequest) {
+      const reqId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+      const reqData = {
+        id: reqId,
+        user_id: user.id,
+        document_url: uploadResult.url,
+        status: 'pending',
+        created_at: nowIso,
+        updated_at: nowIso,
+      };
+      await verificationRequests.insertOne(reqData);
+      verificationRequest = reqData;
     } else {
-      // Update existing verification request
-      await sql`
-        UPDATE verification_requests 
-        SET document_url = ${uploadResult.url},
-            updated_at = NOW()
-        WHERE id = ${verificationRequest[0].id}
-      `;
+      await verificationRequests.updateOne(
+        { id: pendingRequest.id },
+        { $set: { document_url: uploadResult.url, updated_at: nowIso } }
+      );
+      verificationRequest = { ...pendingRequest, document_url: uploadResult.url, updated_at: nowIso };
     }
 
-    // Log document upload
-    await sql`
-      INSERT INTO audit_logs (user_id, action, details, ip_address)
-      VALUES (
-        ${userId}, 
-        'DOCUMENT_UPLOADED',
-        ${JSON.stringify({ 
-          documentId: document[0].id,
-          documentType: documentType,
-          tamperDetected: mlResponse.data.tamperDetected,
-          verificationRequestId: verificationRequest[0].id,
-          ocrConfidence: mlResponse.data.ocrConfidence
-        })},
-        ${request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'}
-      )
-    `;
+    await auditLogs.insertOne({
+      user_id: user.id,
+      action: 'DOCUMENT_UPLOADED',
+      details: {
+        documentId: document.id,
+        documentType: documentType,
+        tamperDetected: mlResponse.data.tamperDetected,
+        verificationRequestId: verificationRequest.id,
+        ocrConfidence: mlResponse.data.ocrConfidence,
+        mimeType: uploadedFileMeta.mimeType,
+        fileName: uploadedFileMeta.fileName,
+      },
+      ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      created_at: new Date().toISOString(),
+    });
 
     const tamperDetected = mlResponse.data.tamperDetected || false;
     const ocrConfidence = mlResponse.data.ocrConfidence || 0;
@@ -170,12 +257,12 @@ export async function POST(request) {
     return Response.json({
       success: true,
       data: {
-        documentId: document[0].id,
+        documentId: document.id,
         documentUrl: uploadResult.url,
         extractedText: mlResponse.data.extractedText,
         tamperDetected: tamperDetected,
         ocrConfidence: ocrConfidence,
-        verificationRequestId: verificationRequest[0].id,
+        verificationRequestId: verificationRequest.id,
         status: tamperDetected ? 'flagged' : 'processed',
         message: tamperDetected 
           ? 'Document uploaded but potential tampering detected'

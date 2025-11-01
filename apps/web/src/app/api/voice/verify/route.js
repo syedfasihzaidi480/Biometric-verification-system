@@ -1,5 +1,5 @@
-import sql from '@/app/api/utils/sql';
 import { upload } from '@/app/api/utils/upload';
+import { getMongoDb } from '@/app/api/utils/mongo';
 
 /**
  * Voice verification endpoint
@@ -23,17 +23,14 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Verify user exists and has enrolled voice profile
-    const userProfile = await sql`
-      SELECT 
-        u.id, u.name, u.phone, u.preferred_language,
-        vp.voice_model_ref, vp.is_enrolled, vp.last_match_score
-      FROM users u
-      LEFT JOIN voice_profiles vp ON u.id = vp.user_id
-      WHERE u.id = ${userId}
-    `;
+    const db = await getMongoDb();
+    const users = db.collection('users');
+    const voiceProfiles = db.collection('voice_profiles');
+    const auditLogs = db.collection('audit_logs');
 
-    if (userProfile.length === 0) {
+    const user = await users.findOne({ id: userId });
+
+    if (!user) {
       return Response.json({
         success: false,
         error: {
@@ -42,10 +39,9 @@ export async function POST(request) {
         }
       }, { status: 404 });
     }
+    const voiceProfile = await voiceProfiles.findOne({ user_id: userId });
 
-    const user = userProfile[0];
-
-    if (!user.is_enrolled || !user.voice_model_ref) {
+    if (!voiceProfile || !voiceProfile.is_enrolled || !voiceProfile.voice_model_ref) {
       return Response.json({
         success: false,
         error: {
@@ -96,28 +92,28 @@ export async function POST(request) {
     const threshold = 0.75; // Configurable threshold
 
     // Update voice profile with latest match score
-    await sql`
-      UPDATE voice_profiles 
-      SET last_match_score = ${matchScore},
-          updated_at = NOW()
-      WHERE user_id = ${userId}
-    `;
+    await voiceProfiles.updateOne(
+      { user_id: userId },
+      {
+        $set: {
+          last_match_score: matchScore,
+          updated_at: new Date().toISOString(),
+        },
+      }
+    );
 
-    // Log verification attempt
-    await sql`
-      INSERT INTO audit_logs (user_id, action, details, ip_address)
-      VALUES (
-        ${userId}, 
-        'VOICE_VERIFICATION_ATTEMPT',
-        ${JSON.stringify({ 
-          matchScore: matchScore,
-          isMatch: isMatch,
-          threshold: threshold,
-          success: isMatch
-        })},
-        ${request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'}
-      )
-    `;
+    await auditLogs.insertOne({
+      user_id: userId,
+      action: 'VOICE_VERIFICATION_ATTEMPT',
+      details: {
+        matchScore: matchScore,
+        isMatch: isMatch,
+        threshold: threshold,
+        success: isMatch,
+      },
+      ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      created_at: new Date().toISOString(),
+    });
 
     if (isMatch && matchScore >= threshold) {
       // Successful verification

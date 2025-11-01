@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DateInput from "@/components/DateInput";
 import useAuth from "@/utils/useAuth";
 
 export default function SignUpPage() {
@@ -161,13 +162,9 @@ export default function SignUpPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Date of Birth *
               </label>
-              <input
-                type="text"
-                required
+              <DateInput
                 value={formData.dateOfBirth}
-                onChange={(e) => updateFormData("dateOfBirth", e.target.value)}
-                className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="DD/MM/YYYY"
+                onChange={(val) => updateFormData("dateOfBirth", val)}
               />
             </div>
 

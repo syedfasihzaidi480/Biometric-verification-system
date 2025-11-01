@@ -113,6 +113,7 @@ export const en = {
     },
     takePhoto: 'Take Photo',
     selectFromLibrary: 'Choose from Library',
+    browseFiles: 'Browse Files',
     retakePhoto: 'Retake Photo',
     uploadDocument: 'Upload Document',
     processing: 'Processing document...',

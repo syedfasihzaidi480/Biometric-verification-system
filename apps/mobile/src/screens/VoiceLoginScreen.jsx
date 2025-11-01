@@ -5,7 +5,8 @@ import {
   TouchableOpacity,
   Alert,
   Animated,
-  StyleSheet
+  StyleSheet,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,10 +15,12 @@ import { ArrowLeft, Mic, Play, Square } from 'lucide-react-native';
 import { Audio } from 'expo-av';
 import { useTranslation } from '@/i18n/useTranslation';
 import { apiFetch } from '@/utils/api';
+import useUser from '@/utils/auth/useUser';
 
 export default function VoiceLoginScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { user } = useUser();
   
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -70,7 +73,14 @@ export default function VoiceLoginScreen() {
       if (status !== 'granted') {
         Alert.alert(
           t('permissions.microphone.title'),
-          t('permissions.microphone.message')
+          t('permissions.microphone.message'),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            {
+              text: t('permissions.openSettings'),
+              onPress: () => Linking.openSettings(),
+            },
+          ]
         );
         return;
       }
@@ -141,12 +151,12 @@ export default function VoiceLoginScreen() {
 
     try {
       const formData = new FormData();
-      formData.append('audio', {
+      formData.append('audioFile', {
         uri: recordingUri,
         type: 'audio/m4a',
         name: 'voice_verification.m4a',
       });
-      formData.append('userId', '1'); // Should come from user context
+      if (user?.id) formData.append('userId', String(user.id));
 
       const response = await apiFetch('/api/voice/verify', {
         method: 'POST',

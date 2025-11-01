@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/utils/auth/useAuth';
@@ -16,8 +7,10 @@ import useUser from '@/utils/auth/useUser';
 import { ChevronDown, Upload, CheckCircle, User, Phone, Calendar } from 'lucide-react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
 import KeyboardAvoidingAnimatedView from '@/components/KeyboardAvoidingAnimatedView';
 import { apiFetch, apiFetchJson } from '@/utils/api';
+import DateInput from '@/components/DateInput';
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
@@ -36,9 +29,9 @@ export default function RegisterScreen() {
   const [selectedDocument, setSelectedDocument] = useState(null);
   
   const documentTypes = [
-    { value: 'cnic', label: 'CNIC' },
+    { value: 'national_id', label: 'CNIC' },
     { value: 'passport', label: 'Passport' },
-    { value: 'license', label: 'License' },
+    { value: 'drivers_license', label: 'License' },
   ];
 
   useEffect(() => {
@@ -104,7 +97,7 @@ export default function RegisterScreen() {
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaType.Images,
       allowsEditing: true,
       aspect: [3, 4],
       quality: 0.8,
@@ -127,7 +120,7 @@ export default function RegisterScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaType.Images,
       allowsEditing: true,
       aspect: [3, 4],
       quality: 0.8,
@@ -162,8 +155,14 @@ export default function RegisterScreen() {
   };
 
   const handleSave = async () => {
-    if (!fullName.trim() || !mobileNumber.trim() || !dateOfBirth.trim() || !idDocumentType) {
+    if (!fullName.trim() || !mobileNumber.trim() || !dateOfBirth.trim()) {
       Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    // If document is selected, document type is required
+    if (selectedDocument && !idDocumentType) {
+      Alert.alert('Error', 'Please select an ID document type before uploading');
       return;
     }
 
@@ -173,6 +172,17 @@ export default function RegisterScreen() {
       Alert.alert('Error', 'Please enter date in DD/MM/YYYY format');
       return;
     }
+
+    // Prevent future DOBs (optional rule)
+    try {
+      const [d, m, y] = dateOfBirth.split('/').map((v) => parseInt(v, 10));
+      const dob = new Date(y, m - 1, d);
+      const today = new Date();
+      if (isFinite(dob.getTime()) && dob > today) {
+        Alert.alert('Invalid Date of Birth', 'Date of birth cannot be in the future.');
+        return;
+      }
+    } catch {}
 
     setSaving(true);
     
@@ -197,15 +207,27 @@ export default function RegisterScreen() {
       });
       
       if (result.success) {
-        // TODO: Upload document if selected
+        setProfile(result.user);
+        
+        // Upload document if selected
+        let documentUploadSuccess = true;
         if (selectedDocument) {
-          await uploadDocument();
+          try {
+            await uploadDocument();
+          } catch (docError) {
+            console.error('Document upload failed:', docError);
+            documentUploadSuccess = false;
+          }
         }
         
-        setProfile(result.user);
+        // Show appropriate success message
+        const message = documentUploadSuccess 
+          ? 'Profile updated successfully!' 
+          : 'Profile updated, but document upload failed. Please try uploading again.';
+        
         Alert.alert(
           'Success',
-          'Profile updated successfully!',
+          message,
           [
             {
               text: 'OK',
@@ -220,7 +242,14 @@ export default function RegisterScreen() {
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      Alert.alert('Error', 'Network error. Please try again.');
+      const message =
+        // @ts-ignore
+        (error?.data?.error?.message || error?.message || 'Network error. Please try again.');
+      // Provide more helpful guidance for connectivity issues
+      const details = (/Network request failed/i.test(message)
+        ? '\n\nTips:\n• Ensure your phone and server are on the same Wi‑Fi network\n• Verify EXPO_PUBLIC_API_URL points to your server (e.g., http://<LAN-IP>:4000)\n• Confirm the server is running and reachable from the device browser'
+        : '');
+      Alert.alert('Error', `${message}${details}`);
     } finally {
       setSaving(false);
     }
@@ -228,21 +257,43 @@ export default function RegisterScreen() {
 
   const uploadDocument = async () => {
     try {
-      const formData = new FormData();
-      formData.append('document', selectedDocument);
-      formData.append('documentType', idDocumentType);
-
-      const response = await apiFetch('/api/document/upload', {
-        method: 'POST',
-        body: formData,
+      console.log('[Upload] Starting document upload:', selectedDocument.name);
+      console.log('[Upload] Document type:', idDocumentType);
+      
+      // Validate document type is set
+      if (!idDocumentType || idDocumentType.trim() === '') {
+        throw new Error('Document type must be selected before uploading');
+      }
+      
+      // Read the file as base64 using expo-file-system
+      const base64 = await FileSystem.readAsStringAsync(selectedDocument.uri, {
+        encoding: FileSystem.EncodingType.Base64,
       });
 
-      if (!response.ok) {
-        throw new Error('Document upload failed');
+      console.log('[Upload] File read as base64, length:', base64.length);
+
+      // Send as JSON with base64
+      const uploadResult = await apiFetchJson('/api/document/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: {
+          documentBase64: base64,
+          documentType: idDocumentType.trim(),
+          documentMimeType: selectedDocument.type,
+          documentFileName: selectedDocument.name,
+        },
+      });
+
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error?.message || 'Document upload failed');
       }
+      
+      console.log('[Upload] Document uploaded successfully:', uploadResult.document?.id);
     } catch (error) {
-      console.error('Document upload error:', error);
-      // Don't fail the entire save for document upload issues
+      console.error('[Upload] Document upload error:', error);
+      throw error; // Re-throw so we can inform the user
     }
   };
 
@@ -329,14 +380,7 @@ export default function RegisterScreen() {
               <Text style={styles.label}>Date of Birth *</Text>
               <View style={styles.inputContainer}>
                 <Calendar size={18} color="#9CA3AF" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={dateOfBirth}
-                  onChangeText={setDateOfBirth}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                />
+                <DateInput value={dateOfBirth} onChangeText={setDateOfBirth} />
               </View>
             </View>
 

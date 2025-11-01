@@ -13,15 +13,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, Camera, ImageIcon, CheckCircle, Upload, RotateCw } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { useTranslation } from '@/i18n/useTranslation';
 import { apiFetch } from '@/utils/api';
+import useUser from '@/utils/auth/useUser';
 
 export default function DocumentUploadScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { user } = useUser();
 
   const [selectedDocumentType, setSelectedDocumentType] = useState('');
-  const [documentImage, setDocumentImage] = useState(null);
+  const [documentFile, setDocumentFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [extractedData, setExtractedData] = useState(null);
   const [tamperDetected, setTamperDetected] = useState(false);
@@ -45,14 +49,21 @@ export default function DocumentUploadScreen() {
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaType.Images,
       allowsEditing: true,
       aspect: [16, 10],
       quality: 0.8,
+      base64: true,
     });
 
     if (!result.canceled) {
-      setDocumentImage(result.assets[0]);
+      const asset = result.assets[0];
+      setDocumentFile({
+        uri: asset.uri,
+        mimeType: asset.mimeType || 'image/jpeg',
+        fileName: asset.fileName || asset.uri.split('/').pop() || 'document.jpg',
+        previewUri: asset.uri,
+      });
     }
   };
 
@@ -67,14 +78,39 @@ export default function DocumentUploadScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaType.Images,
       allowsEditing: true,
       aspect: [16, 10],
       quality: 0.8,
+      base64: true,
     });
 
     if (!result.canceled) {
-      setDocumentImage(result.assets[0]);
+      const asset = result.assets[0];
+      setDocumentFile({
+        uri: asset.uri,
+        mimeType: asset.mimeType || 'image/jpeg',
+        fileName: asset.fileName || asset.uri.split('/').pop() || 'document.jpg',
+        previewUri: asset.uri,
+      });
+    }
+  };
+
+  const pickDocument = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['image/*', 'application/pdf'],
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+
+    if (!result.canceled && result.assets?.length) {
+      const asset = result.assets[0];
+      setDocumentFile({
+        uri: asset.uri,
+        mimeType: asset.mimeType || 'application/octet-stream',
+        fileName: asset.name || 'document',
+        previewUri: asset.mimeType?.startsWith('image/') ? asset.uri : null,
+      });
     }
   };
 
@@ -84,44 +120,57 @@ export default function DocumentUploadScreen() {
       return;
     }
 
-    if (!documentImage) {
-      Alert.alert(t('common.error'), 'Please capture or select a document image');
+    if (!documentFile) {
+      Alert.alert(t('common.error'), 'Please capture or select a document file');
       return;
     }
 
     setIsUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append('document', {
-        uri: documentImage.uri,
-        type: 'image/jpeg',
-        name: 'document.jpg',
-      });
-      formData.append('documentType', selectedDocumentType);
-      formData.append('userId', '1'); // Should come from user context
+  const fileInfo = await FileSystem.getInfoAsync(documentFile.uri);
+      if (fileInfo?.size && fileInfo.size > 15 * 1024 * 1024) {
+        Alert.alert(t('common.error'), 'Document file must be less than 15MB');
+        return;
+      }
 
-      const response = await apiFetch('/api/document/upload', {
+      const base64Data = await FileSystem.readAsStringAsync(documentFile.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const result = await apiFetch('/api/document/upload', {
         method: 'POST',
-        body: formData,
-      });
-
-      const result = await response.json();
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          documentType: selectedDocumentType,
+          documentBase64: base64Data,
+          documentMimeType: documentFile.mimeType,
+          documentFileName: documentFile.fileName,
+          userId: user?.id ? String(user.id) : undefined,
+        },
+      }).then((r) => r.json());
 
       if (result.success) {
         setExtractedData(result.data.extractedText);
-        setTamperDetected(result.data.tamperFlag);
-        
-        Alert.alert(
-          t('document.uploadSuccess'),
-          tamperDetected ? t('document.tamperDetected') : '',
-          [
-            {
-              text: t('common.continue'),
-              onPress: () => router.push('/dashboard'),
-            },
-          ]
-        );
+        setTamperDetected(result.data.tamperDetected || result.data.tamperFlag);
+
+        try {
+          await apiFetch('/api/profile', {
+            method: 'PUT',
+            body: { document_verified: true },
+          });
+        } catch (updateError) {
+          console.warn('Failed to update profile status after document upload', updateError);
+        }
+
+        router.replace({
+          pathname: '/verification-submitted',
+          params: {
+            requestId: result.data?.verificationRequestId || '',
+            tamper: (result.data?.tamperDetected || result.data?.tamperFlag) ? 'true' : 'false',
+          },
+        });
+        return;
       } else {
         Alert.alert(t('common.error'), result.error?.message || t('document.uploadFailed'));
       }
@@ -194,13 +243,20 @@ export default function DocumentUploadScreen() {
 
         {/* Image Capture/Display */}
         <View style={styles.section}>
-          {documentImage ? (
+          {documentFile ? (
             <View style={styles.imagePreviewContainer}>
-              <Image source={{ uri: documentImage.uri }} style={styles.imagePreview} />
+              {documentFile.previewUri ? (
+                <Image source={{ uri: documentFile.previewUri }} style={styles.imagePreview} />
+              ) : (
+                <View style={styles.filePreviewPlaceholder}>
+                  <Upload size={32} color="#6B7280" />
+                  <Text style={styles.fileNameText}>{documentFile.fileName}</Text>
+                </View>
+              )}
               <View style={styles.imageOverlay}>
                 <TouchableOpacity
                   style={styles.retakeButton}
-                  onPress={() => setDocumentImage(null)}
+                  onPress={() => setDocumentFile(null)}
                 >
                   <Text style={styles.retakeButtonText}>{t('document.retakePhoto')}</Text>
                 </TouchableOpacity>
@@ -233,6 +289,15 @@ export default function DocumentUploadScreen() {
                     {t('document.selectFromLibrary')}
                   </Text>
                 </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.captureButton, styles.libraryButton]}
+                  onPress={pickDocument}
+                >
+                  <Upload size={24} color="#007AFF" />
+                  <Text style={[styles.captureButtonText, { color: '#007AFF' }]}>
+                    {t('document.browseFiles', { defaultValue: 'Browse Files' })}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}
@@ -255,7 +320,7 @@ export default function DocumentUploadScreen() {
       </ScrollView>
 
       {/* Upload Button */}
-      {documentImage && selectedDocumentType && (
+      {documentFile && selectedDocumentType && (
         <View style={styles.footer}>
           <TouchableOpacity
             style={[
@@ -435,6 +500,21 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 200,
     resizeMode: 'cover',
+  },
+  filePreviewPlaceholder: {
+    width: '100%',
+    height: 200,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  fileNameText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#4B5563',
+    textAlign: 'center',
   },
   imageOverlay: {
     position: 'absolute',

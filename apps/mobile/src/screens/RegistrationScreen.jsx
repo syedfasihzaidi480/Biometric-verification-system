@@ -13,18 +13,11 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import {
-  ArrowLeft,
-  Calendar,
-  User,
-  Phone,
-  Mail,
-  Shield,
-  Lock,
-} from "lucide-react-native";
+import { ArrowLeft, Calendar, User, Phone, Mail, Shield, Lock } from "lucide-react-native";
 import { useTranslation } from "@/i18n/useTranslation";
 import { apiFetchJson } from "@/utils/api";
 import { signInWithCredentials } from "@/utils/auth/credentials";
+import DateInput from "@/components/DateInput";
 
 export default function RegistrationScreen() {
   const insets = useSafeAreaInsets();
@@ -211,19 +204,11 @@ export default function RegistrationScreen() {
               <Text style={styles.label}>
                 {t("registration.dateOfBirth")} *
               </Text>
-              <View
-                style={[
-                  styles.inputContainer,
-                  errors.dateOfBirth && styles.inputError,
-                ]}
-              >
+              <View style={[styles.inputContainer, errors.dateOfBirth && styles.inputError]}>
                 <Calendar size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.textInput}
+                <DateInput
                   value={formData.dateOfBirth}
                   onChangeText={(value) => updateFormData("dateOfBirth", value)}
-                  placeholder="DD/MM/YYYY"
-                  keyboardType="numeric"
                 />
               </View>
               {errors.dateOfBirth && (

@@ -1,4 +1,4 @@
-import sql from '@/app/api/utils/sql';
+import { getMongoDb } from '@/app/api/utils/mongo';
 
 /**
  * User login endpoint
@@ -24,26 +24,16 @@ export async function POST(request) {
     }
 
     // Find user by phone or pension number
+    const db = await getMongoDb();
+    const usersCollection = db.collection('users');
+    const auditLogs = db.collection('audit_logs');
+
     let user = null;
-    
+
     if (phone) {
-      const users = await sql`
-        SELECT id, name, phone, pension_number, email, date_of_birth, preferred_language, 
-               voice_verified, face_verified, document_verified, 
-               profile_completed, admin_approved, payment_released
-        FROM users 
-        WHERE phone = ${phone.trim()}
-      `;
-      user = users[0] || null;
+      user = await usersCollection.findOne({ phone: phone.trim() });
     } else if (pension_number) {
-      const users = await sql`
-        SELECT id, name, phone, pension_number, email, date_of_birth, preferred_language, 
-               voice_verified, face_verified, document_verified,
-               profile_completed, admin_approved, payment_released
-        FROM users 
-        WHERE pension_number = ${pension_number.trim()}
-      `;
-      user = users[0] || null;
+      user = await usersCollection.findOne({ pension_number: pension_number.trim() });
     }
 
     if (!user) {
@@ -61,19 +51,18 @@ export async function POST(request) {
     let displayDateOfBirth = null;
     if (user.date_of_birth) {
       const date = new Date(user.date_of_birth);
-      displayDateOfBirth = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+      if (!Number.isNaN(date.getTime())) {
+        displayDateOfBirth = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+      }
     }
 
-    // Log the login attempt
-    await sql`
-      INSERT INTO audit_logs (user_id, action, details, ip_address)
-      VALUES (
-        ${user.id}, 
-        'LOGIN_ATTEMPT',
-        ${JSON.stringify({ login_method: phone ? 'phone' : 'pension_number' })},
-        ${request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'}
-      )
-    `;
+    await auditLogs.insertOne({
+      user_id: user.id,
+      action: 'LOGIN_ATTEMPT',
+      details: { login_method: phone ? 'phone' : 'pension_number' },
+      ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      created_at: new Date().toISOString(),
+    });
 
     // Return user data for voice verification
     return Response.json({

@@ -16,50 +16,11 @@ import {
 export default function HomePage() {
   const demoRoutes = [
     {
-      title: "Mobile App Demo",
-      description: "Test the complete mobile verification flow",
-      icon: <Smartphone size={24} />,
-      href: "/mobile-demo",
-      color: "bg-blue-500",
-    },
-    {
       title: "Admin Dashboard",
       description: "Manage verification requests and users",
       icon: <Monitor size={24} />,
       href: "/admin",
       color: "bg-purple-500",
-    },
-    {
-      title: "Voice Biometrics",
-      description: "Voice enrollment and verification APIs",
-      icon: <Mic size={24} />,
-      href: "/api/voice/enroll",
-      color: "bg-green-500",
-      external: true,
-    },
-    {
-      title: "Liveness Detection",
-      description: "Facial liveness verification system",
-      icon: <Camera size={24} />,
-      href: "/api/liveness/check",
-      color: "bg-orange-500",
-      external: true,
-    },
-    {
-      title: "Document Verification",
-      description: "OCR and tamper detection for ID documents",
-      icon: <FileText size={24} />,
-      href: "/api/document/upload",
-      color: "bg-red-500",
-      external: true,
-    },
-    {
-      title: "User Management",
-      description: "Registration and profile management",
-      icon: <Users size={24} />,
-      href: "/api/auth/register",
-      color: "bg-teal-500",
-      external: true,
     },
   ];
 
@@ -219,48 +180,6 @@ export default function HomePage() {
                 <li>Monitor user activity and audit logs</li>
                 <li>Export verification reports</li>
               </ol>
-            </div>
-          </div>
-        </div>
-
-        {/* API Information */}
-        <div className="mt-16 bg-gray-100 rounded-lg p-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-            API Endpoints
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-            <div className="bg-white p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-2">
-                Authentication
-              </h4>
-              <ul className="space-y-1 text-gray-600">
-                <li>POST /api/auth/register</li>
-                <li>POST /api/auth/login</li>
-                <li>GET /api/auth/token</li>
-              </ul>
-            </div>
-            <div className="bg-white p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-2">
-                Voice Biometrics
-              </h4>
-              <ul className="space-y-1 text-gray-600">
-                <li>POST /api/voice/enroll</li>
-                <li>POST /api/voice/verify</li>
-              </ul>
-            </div>
-            <div className="bg-white p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-2">Verification</h4>
-              <ul className="space-y-1 text-gray-600">
-                <li>POST /api/liveness/check</li>
-                <li>POST /api/document/upload</li>
-              </ul>
-            </div>
-            <div className="bg-white p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-900 mb-2">Admin</h4>
-              <ul className="space-y-1 text-gray-600">
-                <li>GET /api/admin/verifications</li>
-                <li>PATCH /api/admin/verifications/[id]</li>
-              </ul>
             </div>
           </div>
         </div>

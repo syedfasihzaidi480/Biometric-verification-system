@@ -24,6 +24,11 @@ export async function apiFetch(path, options = {}) {
   // Normalize headers
   const headers = { ...(opts.headers || {}) };
 
+  // Ensure cookies are included so API sessions stay intact
+  if (typeof opts.credentials === 'undefined') {
+    opts.credentials = 'include';
+  }
+
   // If body is a plain object, JSON-encode it
   const isPlainObject = opts.body && typeof opts.body === 'object' && !(opts.body instanceof FormData);
   if (isPlainObject) {
@@ -45,17 +50,38 @@ export async function apiFetch(path, options = {}) {
 
 // Convenience to fetch JSON with basic error surface
 export async function apiFetchJson(path, options = {}) {
-  const res = await apiFetch(path, options);
-  let data = null;
   try {
-    data = await res.json();
-  } catch (e) {
-    // no-op; leave data as null if not JSON
+    const res = await apiFetch(path, options);
+    let data = null;
+    try {
+      data = await res.json();
+    } catch (e) {
+      // Response might not be JSON; that's okay
+    }
+
+    if (!res.ok) {
+      const message =
+        (data && (typeof data.error === 'string' ? data.error : data?.error?.message)) ||
+        `${res.status} ${res.statusText || 'Request failed'}`;
+      const err = new Error(message);
+      // attach a few useful fields for the UI
+      // @ts-ignore
+      err.status = res.status;
+      // @ts-ignore
+      err.data = data;
+      throw err;
+    }
+    return data;
+  } catch (err) {
+    // Normalize common RN network error
+    if (err instanceof TypeError && /network request failed/i.test(err.message)) {
+      const e = new Error('Network request failed');
+      // @ts-ignore
+      e.code = 'NETWORK_ERROR';
+      throw e;
+    }
+    throw err;
   }
-  if (!res.ok && data?.error) {
-    throw new Error(typeof data.error === 'string' ? data.error : (data.error.message || 'Request failed'));
-  }
-  return data;
 }
 
 export default apiFetch;

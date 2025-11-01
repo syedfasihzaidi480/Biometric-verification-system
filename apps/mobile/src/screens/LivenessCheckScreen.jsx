@@ -5,18 +5,24 @@ import {
   TouchableOpacity,
   Alert,
   StyleSheet,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Camera, RotateCw, CheckCircle } from 'lucide-react-native';
 import { Camera as ExpoCamera } from 'expo-camera';
 import { useTranslation } from '@/i18n/useTranslation';
+import useUser from '@/utils/auth/useUser';
+import { apiFetch } from '@/utils/api';
 
 export default function LivenessCheckScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const cameraRef = useRef(null);
+  const { user } = useUser();
+  const params = useLocalSearchParams();
+  const resolvedUserId = params?.userId || user?.id;
 
   const [hasPermission, setHasPermission] = useState(null);
   const [currentInstruction, setCurrentInstruction] = useState('ready');
@@ -24,6 +30,7 @@ export default function LivenessCheckScreen() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showConsent, setShowConsent] = useState(true);
+  const [lastSelfieUri, setLastSelfieUri] = useState(null);
 
   const instructions = [
     { key: 'ready', duration: 3000 },
@@ -36,9 +43,19 @@ export default function LivenessCheckScreen() {
   useEffect(() => {
     (async () => {
       const { status } = await ExpoCamera.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          t('permissions.camera.title'),
+          t('permissions.camera.message'),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('permissions.openSettings'), onPress: () => Linking.openSettings() },
+          ],
+        );
+      }
       setHasPermission(status === 'granted');
     })();
-  }, []);
+  }, [t]);
 
   const handleConsent = () => {
     setShowConsent(false);
@@ -57,8 +74,9 @@ export default function LivenessCheckScreen() {
       await new Promise(resolve => setTimeout(resolve, instructions[i].duration));
       
       // Capture photo at key moments
-      if (instructions[i].key === 'blink' || instructions[i].key === 'lookStraight') {
-        await capturePhoto();
+      if (instructions[i].key === 'lookStraight') {
+        const photo = await capturePhoto();
+        if (photo?.uri) setLastSelfieUri(photo.uri);
       }
     }
 
@@ -86,16 +104,47 @@ export default function LivenessCheckScreen() {
     setIsProcessing(true);
 
     try {
-      // Simulate liveness processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const livenessScore = Math.random() * 0.3 + 0.7; // 70-100%
-      const isLive = livenessScore > 0.75;
+      if (!resolvedUserId) {
+        throw new Error('Missing userId');
+      }
 
-      if (isLive) {
+      if (!lastSelfieUri) {
+        // Fallback: capture one more photo
+        const fallback = await capturePhoto();
+        if (fallback?.uri) setLastSelfieUri(fallback.uri);
+      }
+
+      if (!lastSelfieUri) {
+        throw new Error('No selfie captured');
+      }
+
+      const formData = new FormData();
+      formData.append('userId', String(resolvedUserId));
+      formData.append('imageFile', {
+        uri: lastSelfieUri,
+        type: 'image/jpeg',
+        name: 'selfie.jpg',
+      });
+
+      const res = await apiFetch('/api/liveness/check', {
+        method: 'POST',
+        body: formData,
+      });
+      const result = await res.json();
+
+      if (result?.success) {
+        try {
+          // Mark face as verified locally so next step unlocks
+          await apiFetch('/api/profile', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: resolvedUserId, face_verified: true }),
+          });
+        } catch (_) {}
+
         Alert.alert(
           t('liveness.livenessSuccess'),
-          t('liveness.livenessScore', { score: (livenessScore * 100).toFixed(1) }),
+          '',
           [
             {
               text: t('common.continue'),
@@ -106,7 +155,7 @@ export default function LivenessCheckScreen() {
       } else {
         Alert.alert(
           t('liveness.livenessFailed'),
-          '',
+          result?.error?.message || '',
           [
             {
               text: t('common.retry'),
@@ -180,7 +229,10 @@ export default function LivenessCheckScreen() {
       <View style={[styles.container, styles.centered]}>
         <Text style={styles.permissionText}>{t('permissions.camera.title')}</Text>
         <Text style={styles.permissionMessage}>{t('permissions.camera.message')}</Text>
-        <TouchableOpacity style={styles.permissionButton}>
+        <TouchableOpacity
+          style={styles.permissionButton}
+          onPress={() => Linking.openSettings()}
+        >
           <Text style={styles.permissionButtonText}>{t('permissions.openSettings')}</Text>
         </TouchableOpacity>
       </View>

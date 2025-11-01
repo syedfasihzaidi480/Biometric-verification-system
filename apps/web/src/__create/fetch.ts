@@ -12,7 +12,9 @@ const safeStringify = (value: unknown) =>
 const postToParent = (level: string, text: string, extra: unknown) => {
   try {
     if (isBackend() || !window.parent || window.parent === window) {
-      ('level' in console ? console[level] : console.log)(text, extra);
+      // Safely index console method by level; fallback to console.log
+      const fn = (console as any)[level] ?? console.log;
+      fn(text, extra);
       return;
     }
     window.parent.postMessage(

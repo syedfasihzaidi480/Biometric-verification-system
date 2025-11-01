@@ -1,4 +1,4 @@
-import sql from '@/app/api/utils/sql';
+import { getMongoDb } from '@/app/api/utils/mongo';
 
 /**
  * Individual verification request management
@@ -11,7 +11,7 @@ export async function GET(request, { params }) {
     // TODO: Add admin authentication middleware
     const { id } = params;
 
-    if (!id || isNaN(parseInt(id))) {
+    if (!id || !id.trim()) {
       return Response.json({
         success: false,
         error: {
@@ -21,44 +21,17 @@ export async function GET(request, { params }) {
       }, { status: 400 });
     }
 
-    // Get detailed verification information
-    const verification = await sql`
-      SELECT 
-        vr.id,
-        vr.user_id,
-        vr.voice_match_score,
-        vr.liveness_image_url,
-        vr.document_url,
-        vr.status,
-        vr.admin_id,
-        vr.notes,
-        vr.created_at,
-        vr.updated_at,
-        u.name as user_name,
-        u.phone as user_phone,
-        u.email as user_email,
-        u.date_of_birth,
-        u.preferred_language,
-        u.created_at as user_created_at,
-        admin.name as admin_name,
-        vp.voice_model_ref,
-        vp.is_enrolled as voice_enrolled,
-        vp.enrollment_samples_count,
-        vp.last_match_score,
-        d.id as document_id,
-        d.document_type,
-        d.document_text,
-        d.tamper_flag
-      FROM verification_requests vr
-      JOIN users u ON vr.user_id = u.id
-      LEFT JOIN users admin ON vr.admin_id = admin.id
-      LEFT JOIN voice_profiles vp ON u.id = vp.user_id
-      LEFT JOIN documents d ON u.id = d.user_id 
-        AND d.document_image_url = vr.document_url
-      WHERE vr.id = ${id}
-    `;
+    const db = await getMongoDb();
+    const verificationRequests = db.collection('verification_requests');
+    const users = db.collection('users');
+    const voiceProfiles = db.collection('voice_profiles');
+    const documents = db.collection('documents');
+    const auditLogs = db.collection('audit_logs');
 
-    if (verification.length === 0) {
+    // Get verification request
+    const verification = await verificationRequests.findOne({ id: id });
+
+    if (!verification) {
       return Response.json({
         success: false,
         error: {
@@ -68,66 +41,83 @@ export async function GET(request, { params }) {
       }, { status: 404 });
     }
 
-    const v = verification[0];
+    // Get user details
+    const user = await users.findOne({ id: verification.user_id });
+    
+    // Get admin details if assigned
+    let admin = null;
+    if (verification.admin_id) {
+      admin = await users.findOne({ id: verification.admin_id });
+    }
+
+    // Get voice profile
+    const voiceProfile = await voiceProfiles.findOne({ user_id: verification.user_id });
+
+    // Get document
+    const document = await documents.findOne({ 
+      user_id: verification.user_id,
+      document_image_url: verification.document_url
+    });
 
     // Get audit trail for this verification
-    const auditLogs = await sql`
-      SELECT 
-        action,
-        details,
-        ip_address,
-        created_at
-      FROM audit_logs
-      WHERE user_id = ${v.user_id}
-      AND (
-        action IN ('VOICE_ENROLLED', 'VOICE_VERIFICATION_ATTEMPT', 'LIVENESS_CHECK', 'DOCUMENT_UPLOADED')
-        OR details::jsonb ? 'verificationRequestId'
-      )
-      ORDER BY created_at DESC
-      LIMIT 20
-    `;
+    const auditLogsData = await auditLogs.find({
+      user_id: verification.user_id,
+      action: { 
+        $in: [
+          'VOICE_ENROLLED', 
+          'VOICE_VERIFICATION_ATTEMPT', 
+          'LIVENESS_CHECK', 
+          'DOCUMENT_UPLOADED',
+          'VERIFICATION_APPROVED',
+          'VERIFICATION_REJECTED'
+        ]
+      }
+    })
+    .sort({ created_at: -1 })
+    .limit(20)
+    .toArray();
 
     return Response.json({
       success: true,
       data: {
         verification: {
-          id: v.id,
-          user: {
-            id: v.user_id,
-            name: v.user_name,
-            phone: v.user_phone,
-            email: v.user_email,
-            date_of_birth: v.date_of_birth,
-            preferred_language: v.preferred_language,
-            created_at: v.user_created_at
-          },
-          voice: {
-            match_score: v.voice_match_score,
-            model_ref: v.voice_model_ref,
-            is_enrolled: v.voice_enrolled,
-            enrollment_samples_count: v.enrollment_samples_count,
-            last_match_score: v.last_match_score
-          },
+          id: verification.id,
+          user: user ? {
+            id: user.id,
+            name: user.name,
+            phone: user.phone,
+            email: user.email,
+            date_of_birth: user.date_of_birth,
+            preferred_language: user.preferred_language,
+            created_at: user.created_at
+          } : null,
+          voice: voiceProfile ? {
+            match_score: verification.voice_match_score,
+            model_ref: voiceProfile.voice_model_ref,
+            is_enrolled: voiceProfile.is_enrolled,
+            enrollment_samples_count: voiceProfile.enrollment_samples_count,
+            last_match_score: voiceProfile.last_match_score
+          } : null,
           liveness: {
-            image_url: v.liveness_image_url
+            image_url: verification.liveness_image_url
           },
-          document: v.document_id ? {
-            id: v.document_id,
-            type: v.document_type,
-            url: v.document_url,
-            extracted_text: v.document_text,
-            tamper_flag: v.tamper_flag
+          document: document ? {
+            id: document.id,
+            type: document.document_type,
+            url: verification.document_url,
+            extracted_text: document.document_text,
+            tamper_flag: document.tamper_flag
           } : null,
-          status: v.status,
-          admin: v.admin_id ? {
-            id: v.admin_id,
-            name: v.admin_name
+          status: verification.status,
+          admin: admin ? {
+            id: admin.id,
+            name: admin.name
           } : null,
-          notes: v.notes,
-          created_at: v.created_at,
-          updated_at: v.updated_at
+          notes: verification.notes,
+          created_at: verification.created_at,
+          updated_at: verification.updated_at
         },
-        audit_trail: auditLogs.map(log => ({
+        audit_trail: auditLogsData.map(log => ({
           action: log.action,
           details: log.details,
           ip_address: log.ip_address,
@@ -160,7 +150,7 @@ export async function PATCH(request, { params }) {
     const body = await request.json();
     const { action, notes, adminId } = body;
 
-    if (!id || isNaN(parseInt(id))) {
+    if (!id || !id.trim()) {
       return Response.json({
         success: false,
         error: {
@@ -190,13 +180,18 @@ export async function PATCH(request, { params }) {
       }, { status: 400 });
     }
 
-    // Verify admin exists
-    const admin = await sql`
-      SELECT id, name, role FROM users 
-      WHERE id = ${adminId} AND role = 'admin'
-    `;
+    const db = await getMongoDb();
+    const users = db.collection('users');
+    const verificationRequests = db.collection('verification_requests');
+    const auditLogs = db.collection('audit_logs');
 
-    if (admin.length === 0) {
+    // Verify admin exists
+    const admin = await users.findOne({ 
+      id: adminId, 
+      role: 'admin' 
+    });
+
+    if (!admin) {
       return Response.json({
         success: false,
         error: {
@@ -207,12 +202,9 @@ export async function PATCH(request, { params }) {
     }
 
     // Get current verification
-    const currentVerification = await sql`
-      SELECT id, user_id, status FROM verification_requests 
-      WHERE id = ${id}
-    `;
+    const verification = await verificationRequests.findOne({ id: id });
 
-    if (currentVerification.length === 0) {
+    if (!verification) {
       return Response.json({
         success: false,
         error: {
@@ -221,8 +213,6 @@ export async function PATCH(request, { params }) {
         }
       }, { status: 404 });
     }
-
-    const verification = currentVerification[0];
 
     if (verification.status !== 'pending') {
       return Response.json({
@@ -236,33 +226,37 @@ export async function PATCH(request, { params }) {
 
     // Update verification status
     const newStatus = action === 'approve' ? 'approved' : 'rejected';
-    const updatedVerification = await sql`
-      UPDATE verification_requests 
-      SET 
-        status = ${newStatus},
-        admin_id = ${adminId},
-        notes = ${notes || null},
-        updated_at = NOW()
-      WHERE id = ${id}
-      RETURNING *
-    `;
+    const now = new Date().toISOString();
+    
+    await verificationRequests.updateOne(
+      { id: id },
+      {
+        $set: {
+          status: newStatus,
+          admin_id: adminId,
+          notes: notes || null,
+          updated_at: now
+        }
+      }
+    );
+
+    // Get updated verification
+    const updatedVerification = await verificationRequests.findOne({ id: id });
 
     // Log admin action
-    await sql`
-      INSERT INTO audit_logs (user_id, action, details, ip_address)
-      VALUES (
-        ${verification.user_id}, 
-        ${action === 'approve' ? 'VERIFICATION_APPROVED' : 'VERIFICATION_REJECTED'},
-        ${JSON.stringify({ 
-          verificationId: id,
-          adminId: adminId,
-          adminName: admin[0].name,
-          notes: notes || null,
-          previousStatus: verification.status
-        })},
-        ${request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'}
-      )
-    `;
+    await auditLogs.insertOne({
+      user_id: verification.user_id,
+      action: action === 'approve' ? 'VERIFICATION_APPROVED' : 'VERIFICATION_REJECTED',
+      details: { 
+        verificationId: id,
+        adminId: adminId,
+        adminName: admin.name,
+        notes: notes || null,
+        previousStatus: verification.status
+      },
+      ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+      created_at: now
+    });
 
     // TODO: Trigger payment release for approved verifications
     // TODO: Send notification to user
@@ -271,11 +265,11 @@ export async function PATCH(request, { params }) {
       success: true,
       data: {
         verification: {
-          id: updatedVerification[0].id,
-          status: updatedVerification[0].status,
-          admin_id: updatedVerification[0].admin_id,
-          notes: updatedVerification[0].notes,
-          updated_at: updatedVerification[0].updated_at
+          id: updatedVerification.id,
+          status: updatedVerification.status,
+          admin_id: updatedVerification.admin_id,
+          notes: updatedVerification.notes,
+          updated_at: updatedVerification.updated_at
         },
         message: `Verification ${action === 'approve' ? 'approved' : 'rejected'} successfully`,
         next_steps: action === 'approve' ? ['payment_release', 'user_notification'] : ['user_notification']

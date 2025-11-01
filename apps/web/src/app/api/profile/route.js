@@ -1,94 +1,74 @@
-import sql from '@/app/api/utils/sql';
+import { getMongoDb } from '@/app/api/utils/mongo';
 import { auth } from '@/auth';
 
 export async function GET() {
   try {
     const session = await auth();
     if (!session || !session.user?.id) {
+      console.error('[Profile GET] No session or user ID');
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const authUserId = session.user.id;
+    console.log('[Profile GET] Auth user ID:', authUserId);
+    
+    const db = await getMongoDb();
+    const users = db.collection('users');
+    let user = await users.findOne({ auth_user_id: authUserId });
 
-    // Get user profile from our users table
-    const userProfile = await sql`
-      SELECT 
-        id,
-        auth_user_id,
-        name,
-        phone,
-        email,
-        date_of_birth,
-        preferred_language,
-        role,
-        profile_completed,
-        voice_verified,
-        face_verified,
-        document_verified,
-        admin_approved,
-        payment_released,
-        created_at,
-        updated_at
-      FROM users 
-      WHERE auth_user_id = ${authUserId}
-      LIMIT 1
-    `;
-
-    // If no profile exists, create a minimal one
-    if (userProfile.length === 0) {
-      const newProfile = await sql`
-        INSERT INTO users (
-          auth_user_id,
-          name,
-          email,
-          preferred_language,
-          role,
-          profile_completed,
-          created_at,
-          updated_at
-        ) VALUES (
-          ${authUserId},
-          ${session.user.name || ''},
-          ${session.user.email || ''},
-          'en',
-          'user',
-          FALSE,
-          NOW(),
-          NOW()
-        )
-        RETURNING 
-          id,
-          auth_user_id,
-          name,
-          phone,
-          email,
-          date_of_birth,
-          preferred_language,
-          role,
-          profile_completed,
-          voice_verified,
-          face_verified,
-          document_verified,
-          admin_approved,
-          payment_released,
-          created_at,
-          updated_at
-      `;
+    if (!user) {
+      console.log('[Profile GET] User not found, creating new user');
+      const now = new Date().toISOString();
+      const newUserId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+      const doc = {
+        id: newUserId,
+        auth_user_id: authUserId,
+        name: session.user.name || '',
+        email: session.user.email || '',
+        phone: null,
+        date_of_birth: null,
+        preferred_language: 'en',
+        role: 'user',
+        profile_completed: false,
+        voice_verified: false,
+        face_verified: false,
+        document_verified: false,
+        admin_approved: false,
+        payment_released: false,
+        created_at: now,
+        updated_at: now,
+      };
       
-      return Response.json({ 
-        success: true,
-        user: newProfile[0]
-      });
+      console.log('[Profile GET] Creating user doc:', JSON.stringify(doc, null, 2));
+      
+      try {
+        await users.insertOne(doc);
+        user = doc;
+        console.log('[Profile GET] User created successfully');
+      } catch (insertError) {
+        console.error('[Profile GET] Insert failed:', insertError);
+        // Try to fetch again in case of race condition
+        user = await users.findOne({ auth_user_id: authUserId });
+        if (!user) {
+          throw insertError;
+        }
+      }
+    } else {
+      console.log('[Profile GET] User found:', user.id);
     }
 
-    return Response.json({ 
-      success: true,
-      user: userProfile[0]
-    });
+    return Response.json({ success: true, user });
 
   } catch (error) {
-    console.error("GET /api/profile error:", error);
-    return Response.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("[Profile GET] Error:", error);
+    console.error("[Profile GET] Stack:", error.stack);
+    return Response.json(
+      {
+        error: process.env.NODE_ENV === 'development' ? (error?.message || 'Internal Server Error') : 'Internal Server Error',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -96,11 +76,15 @@ export async function PUT(request) {
   try {
     const session = await auth();
     if (!session || !session.user?.id) {
+      console.error('[Profile PUT] No session or user ID');
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const authUserId = session.user.id;
+    console.log('[Profile PUT] Auth user ID:', authUserId);
+    
     const body = await request.json();
+    console.log('[Profile PUT] Request body:', JSON.stringify(body, null, 2));
 
     const { 
       name,
@@ -113,115 +97,120 @@ export async function PUT(request) {
       document_verified
     } = body;
 
-    // Build dynamic update query
-    const setClauses = [];
-    const values = [];
+    const db = await getMongoDb();
+    const users = db.collection('users');
+    const auditLogs = db.collection('audit_logs');
 
-    if (typeof name === 'string' && name.trim().length > 0) {
-      setClauses.push(`name = $${values.length + 1}`);
-      values.push(name.trim());
+    const now = new Date().toISOString();
+    
+    // Build complete user document with all fields
+    const userData = {
+      auth_user_id: authUserId,
+      updated_at: now,
+    };
+
+    // Add fields from request body
+    if (typeof name === 'string' && name.trim()) userData.name = name.trim();
+    if (typeof phone === 'string' && phone.trim()) userData.phone = phone.trim();
+    if (typeof date_of_birth === 'string' && date_of_birth.trim()) userData.date_of_birth = date_of_birth.trim();
+    if (typeof preferred_language === 'string' && preferred_language.trim()) userData.preferred_language = preferred_language.trim();
+    if (typeof profile_completed === 'boolean') userData.profile_completed = profile_completed;
+    if (typeof voice_verified === 'boolean') userData.voice_verified = voice_verified;
+    if (typeof face_verified === 'boolean') userData.face_verified = face_verified;
+    if (typeof document_verified === 'boolean') userData.document_verified = document_verified;
+
+    // Check if only updated_at would be set
+    if (Object.keys(userData).length === 2) { // auth_user_id + updated_at only
+      console.error('[Profile PUT] No valid fields to update');
+      return Response.json({ error: 'No valid fields to update' }, { status: 400 });
     }
 
-    if (typeof phone === 'string' && phone.trim().length > 0) {
-      setClauses.push(`phone = $${values.length + 1}`);
-      values.push(phone.trim());
-    }
+    console.log('[Profile PUT] User data to save:', JSON.stringify(userData, null, 2));
 
-    if (typeof date_of_birth === 'string' && date_of_birth.trim().length > 0) {
-      setClauses.push(`date_of_birth = $${values.length + 1}`);
-      values.push(date_of_birth.trim());
-    }
+    // First, try to find existing user
+    let existingUser = await users.findOne({ auth_user_id: authUserId });
+    console.log('[Profile PUT] Existing user:', existingUser ? 'Found' : 'Not found');
 
-    if (typeof preferred_language === 'string' && preferred_language.trim().length > 0) {
-      setClauses.push(`preferred_language = $${values.length + 1}`);
-      values.push(preferred_language.trim());
-    }
-
-    if (typeof profile_completed === 'boolean') {
-      setClauses.push(`profile_completed = $${values.length + 1}`);
-      values.push(profile_completed);
-    }
-
-    if (typeof voice_verified === 'boolean') {
-      setClauses.push(`voice_verified = $${values.length + 1}`);
-      values.push(voice_verified);
-    }
-
-    if (typeof face_verified === 'boolean') {
-      setClauses.push(`face_verified = $${values.length + 1}`);
-      values.push(face_verified);
-    }
-
-    if (typeof document_verified === 'boolean') {
-      setClauses.push(`document_verified = $${values.length + 1}`);
-      values.push(document_verified);
-    }
-
-    if (setClauses.length === 0) {
-      return Response.json(
-        { error: "No valid fields to update" },
-        { status: 400 }
+    if (existingUser) {
+      // Update existing user
+      const updateResult = await users.updateOne(
+        { auth_user_id: authUserId },
+        { $set: userData }
       );
+      console.log('[Profile PUT] Update result:', updateResult.modifiedCount, 'modified');
+    } else {
+      // Create new user with complete data
+      const newUserId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+      const newUserDoc = {
+        id: newUserId,
+        auth_user_id: authUserId,
+        name: userData.name || '',
+        email: session?.user?.email || '',
+        phone: userData.phone || null,
+        date_of_birth: userData.date_of_birth || null,
+        preferred_language: userData.preferred_language || 'en',
+        role: 'user',
+        profile_completed: userData.profile_completed ?? false,
+        voice_verified: userData.voice_verified ?? false,
+        face_verified: userData.face_verified ?? false,
+        document_verified: userData.document_verified ?? false,
+        admin_approved: false,
+        payment_released: false,
+        created_at: now,
+        updated_at: now,
+      };
+      
+      console.log('[Profile PUT] Creating new user:', JSON.stringify(newUserDoc, null, 2));
+      await users.insertOne(newUserDoc);
+      existingUser = newUserDoc;
     }
 
-    // Always update the updated_at timestamp
-    setClauses.push(`updated_at = NOW()`);
-
-    const updateQuery = `
-      UPDATE users 
-      SET ${setClauses.join(', ')} 
-      WHERE auth_user_id = $${values.length + 1}
-      RETURNING 
-        id,
-        auth_user_id,
-        name,
-        phone,
-        email,
-        date_of_birth,
-        preferred_language,
-        role,
-        profile_completed,
-        voice_verified,
-        face_verified,
-        document_verified,
-        admin_approved,
-        payment_released,
-        created_at,
-        updated_at
-    `;
-
-    const result = await sql(updateQuery, [...values, authUserId]);
-    const updatedUser = result?.[0] || null;
-
-    if (!updatedUser) {
-      return Response.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+    // Fetch the updated/created user
+    const user = await users.findOne({ auth_user_id: authUserId });
+    
+    if (!user) {
+      console.error('[Profile PUT] User still not found after upsert!');
+      return Response.json({ 
+        error: 'Failed to save profile. Please try again.',
+        details: 'User document could not be created or retrieved'
+      }, { status: 500 });
     }
 
-    // Log the update
-    await sql`
-      INSERT INTO audit_logs (user_id, action, details, ip_address, created_at)
-      VALUES (
-        ${updatedUser.id},
-        'PROFILE_UPDATED',
-        ${JSON.stringify({ 
-          fieldsUpdated: setClauses.filter(clause => !clause.includes('updated_at')),
-          authUserId: authUserId
-        })},
-        ${request.headers.get('x-forwarded-for') || 'unknown'},
-        NOW()
-      )
-    `;
+    console.log('[Profile PUT] Final user:', JSON.stringify(user, null, 2));
 
-    return Response.json({ 
-      success: true,
-      user: updatedUser
-    });
+    // Log audit trail
+    try {
+      await auditLogs.insertOne({
+        user_id: user.id,
+        action: 'PROFILE_UPDATED',
+        details: { 
+          fieldsUpdated: Object.keys(userData).filter((field) => field !== 'updated_at' && field !== 'auth_user_id'), 
+          authUserId 
+        },
+        ip_address: request.headers.get('x-forwarded-for') || 'unknown',
+        created_at: new Date().toISOString(),
+      });
+    } catch (auditError) {
+      console.error('[Profile PUT] Audit log failed:', auditError);
+      // Don't fail the request if audit fails
+    }
+
+    return Response.json({ success: true, user });
 
   } catch (error) {
-    console.error("PUT /api/profile error:", error);
-    return Response.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("[Profile PUT] Error:", error);
+    console.error("[Profile PUT] Stack:", error.stack);
+    return Response.json(
+      {
+        error: process.env.NODE_ENV === 'development' ? (error?.message || 'Internal Server Error') : 'Internal Server Error',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      },
+      { status: 500 }
+    );
   }
+}
+
+// Allow partial updates via PATCH (same handler as PUT)
+export async function PATCH(request) {
+  return PUT(request);
 }
