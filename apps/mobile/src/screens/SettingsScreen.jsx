@@ -25,6 +25,7 @@ import {
   Lock
 } from 'lucide-react-native';
 import { useTranslation } from '@/i18n/useTranslation';
+import { resetOnboarding } from '@/utils/onboarding';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -140,6 +141,39 @@ export default function SettingsScreen() {
           hasSwitch: true,
           switchValue: darkMode,
           onSwitchChange: setDarkMode,
+        },
+        {
+          icon: <Info size={20} color="#FF9500" />,
+          title: 'Reset Onboarding',
+          subtitle: 'View onboarding screens again',
+          onPress: async () => {
+            Alert.alert(
+              'Reset Onboarding',
+              'This will show the onboarding screens next time you open the app. Continue?',
+              [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                },
+                {
+                  text: 'Reset',
+                  onPress: async () => {
+                    await resetOnboarding();
+                    Alert.alert(
+                      'Success',
+                      'Onboarding reset! Close and reopen the app to see it.',
+                      [
+                        {
+                          text: 'OK',
+                          onPress: () => router.replace('/'),
+                        },
+                      ]
+                    );
+                  },
+                },
+              ]
+            );
+          },
         },
       ],
     },

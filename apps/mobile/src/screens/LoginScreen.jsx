@@ -13,42 +13,36 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { ArrowLeft, Phone, Shield, User } from "lucide-react-native";
+import { ArrowLeft, Shield, User, Mail, Lock } from "lucide-react-native";
 import { useTranslation } from "@/i18n/useTranslation";
-import { apiFetchJson } from "@/utils/api";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
   const [formData, setFormData] = useState({
-    loginField: "",
-    loginType: "auto", // auto, phone, pension
+    email: "",
+    password: "",
   });
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const detectLoginType = (value) => {
-    // If it looks like a phone number (starts with + or contains () or -)
-    if (/^[\+\(]|[\(\)\-\s]/.test(value) || /^\d{10,}$/.test(value.replace(/\s/g, ''))) {
-      return 'phone';
-    }
-    // Otherwise assume it's a pension number
-    return 'pension';
-  };
-
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.loginField.trim()) {
-      newErrors.loginField = "Please enter your phone number or pension number";
-      setErrors(newErrors);
-      return false;
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      newErrors.email = "Please enter a valid email address";
     }
 
-    setErrors({});
-    return true;
+    if (!formData.password.trim()) {
+      newErrors.password = "Password is required";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
@@ -59,39 +53,66 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      const loginType = detectLoginType(formData.loginField);
-      const loginData = loginType === 'phone' 
-        ? { phone: formData.loginField.trim() }
-        : { pension_number: formData.loginField.trim() };
-
-      const result = await apiFetchJson("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: loginData,
+      console.log('[LoginScreen] Attempting sign in...');
+      // Use the credentials signin from the auth utility
+      const { signInWithCredentials } = await import("@/utils/auth/credentials");
+      
+      const result = await signInWithCredentials({
+        email: formData.email.trim(),
+        password: formData.password.trim(),
+        callbackUrl: "/(tabs)",
       });
 
-      if (result.success) {
-        // User found, proceed to voice verification
-        router.push({
-          pathname: "/voice-verification",
-          params: { 
-            userId: result.data.user.id,
-            userName: result.data.user.name,
-            dateOfBirth: result.data.user.date_of_birth,
-            returnUrl: "/dashboard"
-          },
-        });
-      } else {
+      console.log('[LoginScreen] Sign in result:', result);
+
+      if (result.ok && result.session) {
+        // Successfully signed in, navigate to dashboard
+        console.log('[LoginScreen] Sign in successful, navigating to dashboard');
         Alert.alert(
-          t("common.error"),
-          result.error?.message || "User not found. Please check your details.",
+          "Success",
+          "You have successfully signed in!",
+          [
+            {
+              text: "OK",
+              onPress: () => router.replace("/(tabs)"),
+            },
+          ]
+        );
+      } else {
+        console.log('[LoginScreen] Sign in failed:', result.error);
+        
+        // Provide more helpful error messages
+        let errorMessage = "Invalid email or password. Please try again.";
+        let errorTitle = "Sign In Failed";
+        
+        if (result.error && result.error.toLowerCase().includes('no session')) {
+          errorMessage = "Unable to establish session. Please check your credentials and try again.";
+        } else if (result.error && result.error.toLowerCase().includes('invalid')) {
+          errorMessage = "The email or password you entered is incorrect. If you don't have an account, please register first.";
+        }
+        
+        Alert.alert(
+          errorTitle,
+          errorMessage,
+          [
+            {
+              text: "Register",
+              onPress: () => router.push("/registration"),
+              style: "default",
+            },
+            {
+              text: "Try Again",
+              style: "cancel",
+            },
+          ]
         );
       }
     } catch (error) {
-      console.error("Login error:", error);
-      Alert.alert(t("common.error"), t("errors.network"));
+      console.error("[LoginScreen] Login error:", error);
+      Alert.alert(
+        "Error",
+        error.message || "Something went wrong. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -135,45 +156,60 @@ export default function LoginScreen() {
           <View style={styles.welcomeContainer}>
             <Text style={styles.welcomeTitle}>Welcome Back</Text>
             <Text style={styles.welcomeSubtitle}>
-              Sign in with your phone number or pension number
+              Sign in to your account
             </Text>
           </View>
 
           {/* Form */}
           <View style={styles.form}>
-            {/* Login Field */}
+            {/* Email Field */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number or Pension Number *</Text>
+              <Text style={styles.label}>Email</Text>
               <View
                 style={[
                   styles.inputContainer,
-                  errors.loginField && styles.inputError,
+                  errors.email && styles.inputError,
                 ]}
               >
                 <User size={20} color="#666" style={styles.inputIcon} />
                 <TextInput
                   style={styles.textInput}
-                  value={formData.loginField}
-                  onChangeText={(value) => updateFormData("loginField", value)}
-                  placeholder="Enter phone number or pension number"
+                  value={formData.email}
+                  onChangeText={(value) => updateFormData("email", value)}
+                  placeholder="valtorosolutions@gmail.com"
                   autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
                 />
               </View>
-              {errors.loginField && (
-                <Text style={styles.errorText}>{errors.loginField}</Text>
+              {errors.email && (
+                <Text style={styles.errorText}>{errors.email}</Text>
               )}
             </View>
 
-            {/* Login Type Hint */}
-            <View style={styles.hintContainer}>
-              <View style={styles.hintRow}>
-                <Phone size={16} color="#6B7280" />
-                <Text style={styles.hintText}>Phone: +1 (555) 123-4567</Text>
+            {/* Password Field */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <View
+                style={[
+                  styles.inputContainer,
+                  errors.password && styles.inputError,
+                ]}
+              >
+                <Shield size={20} color="#666" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  value={formData.password}
+                  onChangeText={(value) => updateFormData("password", value)}
+                  placeholder="••••••••"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="password"
+                />
               </View>
-              <View style={styles.hintRow}>
-                <Shield size={16} color="#6B7280" />
-                <Text style={styles.hintText}>Pension: ABC123456</Text>
-              </View>
+              {errors.password && (
+                <Text style={styles.errorText}>{errors.password}</Text>
+              )}
             </View>
 
             {/* Terms */}
@@ -301,25 +337,6 @@ const styles = StyleSheet.create({
     color: "#EF4444",
     marginTop: 4,
     marginLeft: 4,
-  },
-  hintContainer: {
-    marginBottom: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: "#F8FAFC",
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: "#3B82F6",
-  },
-  hintRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  hintText: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginLeft: 8,
   },
   terms: {
     fontSize: 12,

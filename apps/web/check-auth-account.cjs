@@ -2,6 +2,7 @@ const { MongoClient } = require('mongodb');
 
 const mongoUri = process.env.MONGODB_URI;
 const mongoDbName = process.env.MONGODB_DB || 'auth';
+const EMAIL = process.env.EMAIL || 'fasihzaidi480@gmail.com';
 
 async function checkAuthAccount() {
   const client = new MongoClient(mongoUri);
@@ -14,10 +15,11 @@ async function checkAuthAccount() {
     
     // Find auth_user
     const authUser = await db.collection('auth_users').findOne({ 
-      email: 'fasihzaidi480@gmail.com' 
+      email: EMAIL 
     });
     
-    console.log('\nAuth User:', authUser);
+  console.log(`\nChecking email: ${EMAIL}`);
+  console.log('\nAuth User:', authUser);
     
     if (authUser) {
       // Find account

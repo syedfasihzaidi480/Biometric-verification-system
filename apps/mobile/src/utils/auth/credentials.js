@@ -6,27 +6,68 @@ import { useAuthStore } from './store';
 // 2) Fetch /api/auth/session to retrieve the session payload
 // 3) Persist session in auth store (SecureStore)
 export async function signInWithCredentials({ email, password, callbackUrl = '/' }) {
-  const body = new URLSearchParams();
-  body.set('email', email);
-  body.set('password', password);
-  // Provide a callbackUrl so Auth.js has a target (even if we don't follow it here)
-  if (callbackUrl) body.set('callbackUrl', callbackUrl);
+  try {
+    const body = new URLSearchParams();
+    body.set('email', email);
+    body.set('password', password);
+    // Provide a callbackUrl so Auth.js has a target (even if we don't follow it here)
+    if (callbackUrl) body.set('callbackUrl', callbackUrl);
 
-  // Auth.js may respond with a redirect; RN fetch will still apply Set-Cookie
-  await apiFetch('/api/auth/callback/credentials', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  });
+    console.log('[signInWithCredentials] Attempting to sign in with email:', email);
 
-  // Now retrieve the session JSON
-  const session = await apiFetchJson('/api/auth/session', { method: 'GET' });
-  if (session && (session.user || session?.expires)) {
-    // Store in auth store for app UI
-    useAuthStore.getState().setAuth(session);
-    return { ok: true, session };
+    // Auth.js may respond with a redirect; RN fetch will still apply Set-Cookie
+    const authResponse = await apiFetch('/api/auth/callback/credentials', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+
+    console.log('[signInWithCredentials] Auth callback response status:', authResponse.status);
+    console.log('[signInWithCredentials] Auth callback response URL:', authResponse.url);
+    
+    // Log response headers to check if Set-Cookie was sent
+    const headers = {};
+    authResponse.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    console.log('[signInWithCredentials] Response headers:', JSON.stringify(headers));
+    
+    // Check if the response indicates an error
+    if (authResponse.status === 401 || authResponse.status === 403) {
+      console.log('[signInWithCredentials] Authentication failed - invalid credentials');
+      return { ok: false, error: 'Invalid email or password' };
+    }
+
+    // Check if response contains an error parameter in URL (Auth.js error redirect)
+    const responseUrl = authResponse.url || '';
+    if (responseUrl.includes('error=')) {
+      const errorMatch = responseUrl.match(/error=([^&]+)/);
+      const errorType = errorMatch ? decodeURIComponent(errorMatch[1]) : 'CredentialsSignin';
+      console.log('[signInWithCredentials] Auth error detected:', errorType);
+      return { ok: false, error: 'Invalid email or password' };
+    }
+
+    // Give the server a moment to set the session cookie
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Now retrieve the session JSON
+    console.log('[signInWithCredentials] Fetching session...');
+    const session = await apiFetchJson('/api/auth/session', { method: 'GET' });
+    console.log('[signInWithCredentials] Session retrieved:', JSON.stringify(session));
+    
+    if (session && (session.user || session?.expires)) {
+      // Store in auth store for app UI
+      useAuthStore.getState().setAuth(session);
+      console.log('[signInWithCredentials] Sign in successful!');
+      return { ok: true, session };
+    }
+    
+    console.log('[signInWithCredentials] No valid session returned');
+    return { ok: false, error: 'No session returned' };
+  } catch (error) {
+    console.error('[signInWithCredentials] Error during sign in:', error);
+    return { ok: false, error: error.message || 'Sign in failed' };
   }
-  return { ok: false, error: 'No session returned' };
 }
 
 export default signInWithCredentials;
