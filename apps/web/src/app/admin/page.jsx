@@ -28,6 +28,8 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [liveConnected, setLiveConnected] = useState(false);
+  const [currentAdminId, setCurrentAdminId] = useState(null);
 
   useEffect(() => {
     checkAuth();
@@ -50,6 +52,7 @@ export default function AdminDashboard() {
 
       console.log("[Dashboard] Authentication successful");
       setIsSuperAdmin(result.isSuperAdmin || false);
+      setCurrentAdminId(result.data?.user?.id || null);
       setIsCheckingAuth(false);
       loadVerificationRequests();
     } catch (error) {
@@ -83,6 +86,33 @@ export default function AdminDashboard() {
     }
   };
 
+  // Real-time updates via SSE: refresh when any verification-related change occurs
+  useEffect(() => {
+    if (isCheckingAuth) return;
+
+    let debounceTimer = null;
+    const schedule = () => {
+      if (debounceTimer) return;
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        loadVerificationRequests();
+      }, 800);
+    };
+
+    try {
+      const es = new EventSource('/api/admin/verifications/stream', { withCredentials: true });
+      es.onopen = () => setLiveConnected(true);
+      es.onerror = () => setLiveConnected(false);
+      es.addEventListener('invalidate', () => schedule());
+      return () => {
+        try { es.close(); } catch {}
+        if (debounceTimer) clearTimeout(debounceTimer);
+      };
+    } catch (e) {
+      console.warn('EventSource not available for verifications stream');
+    }
+  }, [isCheckingAuth]);
+
   const loadVerificationDetails = async (verificationId) => {
     setLoadingDetails(true);
     setSelectedRequest(verificationId);
@@ -106,50 +136,73 @@ export default function AdminDashboard() {
   };
 
   const handleApprove = async (requestId) => {
+    if (!currentAdminId) {
+      alert("Unable to determine admin user. Please refresh and try again.");
+      return;
+    }
+    
     try {
       const response = await fetch(`/api/admin/verifications/${requestId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           action: "approve",
           notes: "Approved by admin",
-          adminId: 1, // TODO: Get from authenticated admin user
+          adminId: currentAdminId,
         }),
       });
 
       const result = await response.json();
       if (result.success) {
         loadVerificationRequests();
-        setSelectedRequest(null);
+        closeVerificationDetails();
+      } else {
+        alert(result.error?.message || "Failed to approve verification");
       }
     } catch (error) {
       console.error("Error approving request:", error);
+      alert("Failed to approve verification. Please try again.");
     }
   };
 
   const handleReject = async (requestId, reason) => {
+    if (!currentAdminId) {
+      alert("Unable to determine admin user. Please refresh and try again.");
+      return;
+    }
+
+    if (!reason || !reason.trim()) {
+      alert("Please provide a reason for rejection.");
+      return;
+    }
+    
     try {
       const response = await fetch(`/api/admin/verifications/${requestId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           action: "reject",
           notes: reason,
-          adminId: 1, // TODO: Get from authenticated admin user
+          adminId: currentAdminId,
         }),
       });
 
       const result = await response.json();
       if (result.success) {
         loadVerificationRequests();
-        setSelectedRequest(null);
+        closeVerificationDetails();
+      } else {
+        alert(result.error?.message || "Failed to reject verification");
       }
     } catch (error) {
       console.error("Error rejecting request:", error);
+      alert("Failed to reject verification. Please try again.");
     }
   };
 
@@ -157,12 +210,10 @@ export default function AdminDashboard() {
     ? verificationRequests.filter((request) => {
         const matchesFilter = filter === "all" || request.status === filter;
         const matchesSearch =
-          request.user?.name
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
+          !searchTerm ||
+          request.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           request.user?.phone?.includes(searchTerm) ||
-          request.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          request.user_phone?.includes(searchTerm);
+          request.user?.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
         return matchesFilter && matchesSearch;
       })
@@ -280,6 +331,11 @@ export default function AdminDashboard() {
                 <RefreshCw size={16} className="mr-2" />
                 Refresh
               </button>
+              {liveConnected && (
+                <span className="inline-flex items-center text-xs text-green-600 px-2 py-1">
+                  ● Live
+                </span>
+              )}
               <button
                 onClick={async () => {
                   try {
@@ -385,10 +441,10 @@ export default function AdminDashboard() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div>
                               <div className="text-sm font-medium text-gray-900">
-                                {request.user_name}
+                                {request.user?.name || 'N/A'}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {request.user_phone}
+                                {request.user?.phone || request.user?.email || 'N/A'}
                               </div>
                             </div>
                           </td>
@@ -476,8 +532,7 @@ export default function AdminDashboard() {
                     <span className="text-sm text-gray-600">Pending</span>
                   </div>
                   <span className="font-medium">
-                    {filteredRequests.filter((r) => r.status === "pending")
-                      .length || 2}
+                    {verificationRequests.filter((r) => r.status === "pending").length}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -486,8 +541,7 @@ export default function AdminDashboard() {
                     <span className="text-sm text-gray-600">Approved</span>
                   </div>
                   <span className="font-medium">
-                    {filteredRequests.filter((r) => r.status === "approved")
-                      .length || 1}
+                    {verificationRequests.filter((r) => r.status === "approved").length}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -496,8 +550,7 @@ export default function AdminDashboard() {
                     <span className="text-sm text-gray-600">Rejected</span>
                   </div>
                   <span className="font-medium">
-                    {filteredRequests.filter((r) => r.status === "rejected")
-                      .length || 0}
+                    {verificationRequests.filter((r) => r.status === "rejected").length}
                   </span>
                 </div>
               </div>

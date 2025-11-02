@@ -32,6 +32,7 @@ export default function AdminUsersPage() {
   const [userDetails, setUserDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [liveConnected, setLiveConnected] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -66,6 +67,41 @@ export default function AdminUsersPage() {
       loadUsers();
     }
   }, [currentPage, filter]);
+
+  // Real-time: subscribe to server-sent events and refresh on changes
+  useEffect(() => {
+    if (isCheckingAuth) return;
+
+    let debounceTimer = null;
+    const triggerRefresh = () => {
+      if (debounceTimer) return;
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        loadUsers();
+      }, 800);
+    };
+
+    try {
+      const es = new EventSource('/api/admin/users/stream', { withCredentials: true });
+      es.onopen = () => setLiveConnected(true);
+      es.onerror = () => setLiveConnected(false);
+      es.addEventListener('invalidate', (ev) => {
+        try {
+          const payload = JSON.parse(ev.data || '{}');
+          // Only refresh if the change is relevant; since summary and list
+          // depend on multiple collections, refresh on any invalidate.
+          triggerRefresh();
+        } catch {}
+      });
+
+      return () => {
+        try { es.close(); } catch {}
+        if (debounceTimer) clearTimeout(debounceTimer);
+      };
+    } catch (e) {
+      console.warn('EventSource not available, skipping live updates');
+    }
+  }, [isCheckingAuth, currentPage, filter]);
 
   const loadUsers = async () => {
     setIsLoading(true);
@@ -181,6 +217,11 @@ export default function AdminUsersPage() {
                 <RefreshCw size={16} className="mr-2" />
                 Refresh
               </button>
+              {liveConnected && (
+                <span className="inline-flex items-center text-xs text-green-600 px-2 py-1">
+                  ● Live
+                </span>
+              )}
               <button
                 onClick={async () => {
                   try {

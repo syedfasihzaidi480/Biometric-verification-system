@@ -185,10 +185,10 @@ export async function PATCH(request, { params }) {
     const verificationRequests = db.collection('verification_requests');
     const auditLogs = db.collection('audit_logs');
 
-    // Verify admin exists
+    // Verify admin exists (check both id and auth_user_id)
     const admin = await users.findOne({ 
-      id: adminId, 
-      role: 'admin' 
+      $or: [{ id: adminId }, { auth_user_id: adminId }],
+      role: { $in: ['admin', 'super_admin'] }
     });
 
     if (!admin) {
