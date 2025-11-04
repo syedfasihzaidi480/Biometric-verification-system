@@ -63,9 +63,7 @@ export default function RegistrationScreen() {
     }
 
     // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+    if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
       newErrors.email = "Please enter a valid email address";
     }
 
@@ -100,7 +98,7 @@ export default function RegistrationScreen() {
         body: {
           name: formData.fullName.trim(),
           phone: formData.phoneNumber.trim(),
-          email: formData.email.trim(),
+          email: formData.email.trim() || undefined,
           password: formData.password.trim(),
           date_of_birth: isoDate,
           pension_number: formData.pensionNumber.trim(),
@@ -109,12 +107,21 @@ export default function RegistrationScreen() {
       });
 
       if (result.success) {
-        // Auto sign-in after successful registration
-        await signInWithCredentials({
-          email: formData.email.trim(),
-          password: formData.password.trim(),
-          callbackUrl: "/",
-        });
+        const loginIdentifier = formData.email.trim() || formData.phoneNumber.trim();
+
+        if (loginIdentifier) {
+          try {
+            await signInWithCredentials({
+              identifier: loginIdentifier,
+              email: formData.email.trim() || undefined,
+              phone: formData.phoneNumber.trim() || undefined,
+              password: formData.password.trim(),
+              callbackUrl: "/",
+            });
+          } catch (authError) {
+            console.warn("Registration auto sign-in failed:", authError);
+          }
+        }
 
         // Store user data for next steps
         router.push({
@@ -269,7 +276,10 @@ export default function RegistrationScreen() {
 
             {/* Email */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email *</Text>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>{t("registration.email")}</Text>
+                <Text style={styles.optionalTag}>{t("registration.emailOptionalTag")}</Text>
+              </View>
               <View
                 style={[
                   styles.inputContainer,
@@ -281,7 +291,7 @@ export default function RegistrationScreen() {
                   style={styles.textInput}
                   value={formData.email}
                   onChangeText={(value) => updateFormData("email", value)}
-                  placeholder="your.email@example.com"
+                  placeholder={t("registration.emailPlaceholder")}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoComplete="email"
@@ -289,6 +299,9 @@ export default function RegistrationScreen() {
               </View>
               {errors.email && (
                 <Text style={styles.errorText}>{errors.email}</Text>
+              )}
+              {!errors.email && (
+                <Text style={styles.helperText}>{t("registration.emailHelper")}</Text>
               )}
             </View>
 
@@ -318,7 +331,7 @@ export default function RegistrationScreen() {
             </View>
 
             {/* Required fields note */}
-            <Text style={styles.requiredNote}>* Required fields</Text>
+            <Text style={styles.requiredNote}>{t("registration.requiredNote")}</Text>
           </View>
         </ScrollView>
 
@@ -389,6 +402,16 @@ const styles = StyleSheet.create({
     color: "#374151",
     marginBottom: 8,
   },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  optionalTag: {
+    fontSize: 12,
+    color: "#6B7280",
+  },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -416,6 +439,11 @@ const styles = StyleSheet.create({
     color: "#EF4444",
     marginTop: 4,
     marginLeft: 4,
+  },
+  helperText: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 6,
   },
   requiredNote: {
     fontSize: 12,

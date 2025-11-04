@@ -5,15 +5,30 @@ import { useAuthStore } from './store';
 // 1) POST to /api/auth/callback/credentials with form-encoded body
 // 2) Fetch /api/auth/session to retrieve the session payload
 // 3) Persist session in auth store (SecureStore)
-export async function signInWithCredentials({ email, password, callbackUrl = '/' }) {
+/**
+ * @param {{ identifier?: string; email?: string; phone?: string; password: string; callbackUrl?: string }} params
+ */
+export async function signInWithCredentials({ identifier, email, phone, password, callbackUrl = '/' }) {
   try {
+    const loginIdentifier = identifier || email || phone;
+    if (!loginIdentifier) {
+      throw new Error('An email or phone number is required for sign in');
+    }
     const body = new URLSearchParams();
-    body.set('email', email);
+    body.set('identifier', loginIdentifier);
+    const trimmedEmail = (email ?? '').trim();
+    const trimmedPhone = (phone ?? '').trim();
+    if (trimmedEmail || loginIdentifier.includes('@')) {
+      body.set('email', trimmedEmail || loginIdentifier);
+    }
+    if (trimmedPhone || !loginIdentifier.includes('@')) {
+      body.set('phone', trimmedPhone || loginIdentifier);
+    }
     body.set('password', password);
     // Provide a callbackUrl so Auth.js has a target (even if we don't follow it here)
     if (callbackUrl) body.set('callbackUrl', callbackUrl);
 
-    console.log('[signInWithCredentials] Attempting to sign in with email:', email);
+    console.log('[signInWithCredentials] Attempting to sign in with identifier:', loginIdentifier);
 
     // Auth.js may respond with a redirect; RN fetch will still apply Set-Cookie
     const authResponse = await apiFetch('/api/auth/callback/credentials', {
@@ -34,8 +49,8 @@ export async function signInWithCredentials({ email, password, callbackUrl = '/'
     
     // Check if the response indicates an error
     if (authResponse.status === 401 || authResponse.status === 403) {
-      console.log('[signInWithCredentials] Authentication failed - invalid credentials');
-      return { ok: false, error: 'Invalid email or password' };
+  console.log('[signInWithCredentials] Authentication failed - invalid credentials');
+  return { ok: false, error: 'Invalid credentials' };
     }
 
     // Check if response contains an error parameter in URL (Auth.js error redirect)
@@ -44,7 +59,7 @@ export async function signInWithCredentials({ email, password, callbackUrl = '/'
       const errorMatch = responseUrl.match(/error=([^&]+)/);
       const errorType = errorMatch ? decodeURIComponent(errorMatch[1]) : 'CredentialsSignin';
       console.log('[signInWithCredentials] Auth error detected:', errorType);
-      return { ok: false, error: 'Invalid email or password' };
+  return { ok: false, error: 'Invalid credentials' };
     }
 
     // Give the server a moment to set the session cookie

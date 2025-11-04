@@ -6,6 +6,9 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
+  Image,
+  Alert,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,7 +16,16 @@ import { router } from 'expo-router';
 import { apiFetchJson } from '@/utils/api';
 import { useAuth } from '@/utils/auth/useAuth';
 import useUser from '@/utils/auth/useUser';
-import { CheckCircle, Clock, AlertCircle } from 'lucide-react-native';
+import {
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Fingerprint,
+  HelpCircle,
+  PhoneCall,
+} from 'lucide-react-native';
+
+const INPS_LOGO = require('../../../assets/images/icon.png');
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -43,22 +55,93 @@ export default function HomeScreen() {
     }
   };
 
+  const handleLogin = () => {
+    signIn();
+  };
+
+  const handleCreateAccount = () => {
+    router.push('/registration');
+  };
+
+  const handleBiometric = () => {
+    if (isAuthenticated) {
+      router.push('/(tabs)/verify');
+    } else {
+      signIn();
+    }
+  };
+
+  const handleHelp = () => {
+    Alert.alert(
+      'Need Help?',
+      'Email support@inps.gov or visit your nearest INPS office for assistance.'
+    );
+  };
+
+  const handleSupport = async () => {
+    const supportNumber = '+22320202020';
+    const telUrl = `tel:${supportNumber}`;
+    try {
+      const canCall = await Linking.canOpenURL(telUrl);
+      if (canCall) {
+        await Linking.openURL(telUrl);
+      } else {
+        Alert.alert('Support', `Call ${supportNumber} for support.`);
+      }
+    } catch (error) {
+      Alert.alert('Support', `Call ${supportNumber} for support.`);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.container, { paddingTop: insets.top }]}> 
         <StatusBar style="dark" />
-        
-        <View style={styles.centerContent}>
-          <Text style={styles.welcomeTitle}>Welcome</Text>
-          <Text style={styles.subtitle}>Sign in to access your verification dashboard</Text>
-          
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => signIn()}
-          >
-            <Text style={styles.primaryButtonText}>Sign In</Text>
+
+        <ScrollView
+          contentContainerStyle={[styles.authContent, { paddingBottom: insets.bottom + 24 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.logoContainer}>
+            <View style={styles.logoWrapper}>
+              <Image source={INPS_LOGO} style={styles.logoImage} resizeMode="contain" />
+            </View>
+          </View>
+
+          <Text style={styles.brandTitle}>Welcome to INPS</Text>
+          <Text style={styles.brandSubtitle}>Your trusted insurance system</Text>
+
+          <TouchableOpacity style={styles.primaryButtonLarge} onPress={handleLogin}>
+            <Text style={styles.primaryButtonText}>Login</Text>
           </TouchableOpacity>
-        </View>
+
+          <TouchableOpacity style={styles.secondaryButton} onPress={handleCreateAccount}>
+            <Text style={styles.secondaryButtonText}>Create Account</Text>
+          </TouchableOpacity>
+
+          <View style={styles.quickActionRow}>
+            <TouchableOpacity style={styles.quickAction} onPress={handleBiometric}>
+              <View style={styles.quickActionIcon}>
+                <Fingerprint size={22} color="#1F2937" />
+              </View>
+              <Text style={styles.quickActionLabel}>Biometric</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.quickAction} onPress={handleHelp}>
+              <View style={styles.quickActionIcon}>
+                <HelpCircle size={22} color="#1F2937" />
+              </View>
+              <Text style={styles.quickActionLabel}>Help</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.quickAction} onPress={handleSupport}>
+              <View style={styles.quickActionIcon}>
+                <PhoneCall size={22} color="#1F2937" />
+              </View>
+              <Text style={styles.quickActionLabel}>Support</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </View>
     );
   }
@@ -195,11 +278,52 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
+  authContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
   centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24,
+  },
+  logoContainer: {
+    marginBottom: 32,
+    width: '100%',
+    alignItems: 'center',
+  },
+  logoWrapper: {
+    width: 120,
+    height: 120,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  logoImage: {
+    width: 90,
+    height: 90,
+  },
+  brandTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  brandSubtitle: {
+    fontSize: 15,
+    color: '#6B7280',
+    marginBottom: 32,
+    textAlign: 'center',
   },
   scrollView: {
     flex: 1,
@@ -325,6 +449,19 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     marginBottom: 16,
   },
+  primaryButtonLarge: {
+    width: '100%',
+    backgroundColor: '#007AFF',
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
+    elevation: 6,
+    marginBottom: 16,
+  },
   primaryButton: {
     backgroundColor: '#007AFF',
     paddingVertical: 16,
@@ -340,5 +477,52 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  secondaryButton: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  secondaryButtonText: {
+    color: '#007AFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  quickActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  quickAction: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 6,
+    paddingVertical: 18,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  quickActionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  quickActionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
   },
 });

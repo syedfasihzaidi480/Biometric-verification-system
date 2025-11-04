@@ -39,7 +39,7 @@
 					"resizeMode": "contain"
 				}
 			],
-			"expo-audio",
+			"expo-av",
 			[
 				"expo-build-properties",
 				{

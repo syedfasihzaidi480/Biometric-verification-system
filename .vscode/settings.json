@@ -1,13 +1,22 @@
 {
   "typescript.tsdk": "apps/web/node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
-  
-  // Hide type errors from node_modules
-  "typescript.problemMatchers": [
-    "$tsc-watch"
-  ],
-  
-  // Optional: Filter out node_modules errors from Problems panel
+
+  // Prefer diagnostics only for your projects, not nested package tsconfigs
+  "typescript.tsserver.experimental.enableProjectDiagnostics": false,
+
+  // Hide type errors from node_modules in Problems view
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.expo": true,
+    "**/caches": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.expo/**": true,
+    "**/caches/**": true
+  },
+
   "problems.sortOrder": "severity",
   "problems.defaultViewMode": "tree"
 }

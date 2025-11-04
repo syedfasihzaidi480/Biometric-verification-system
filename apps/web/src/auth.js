@@ -256,9 +256,9 @@ export const { auth } = CreateAuth({
       id: 'credentials',
       name: 'Credentials Sign in',
       credentials: {
-        email: {
-          label: 'Email',
-          type: 'email',
+        identifier: {
+          label: 'Email or Phone',
+          type: 'text',
         },
         password: {
           label: 'Password',
@@ -266,17 +266,48 @@ export const { auth } = CreateAuth({
         },
       },
       authorize: async (credentials) => {
-        const { email, password } = credentials;
-        if (!email || !password) {
+        const { identifier, password } = credentials;
+        if (!identifier || !password) {
           return null;
         }
-        if (typeof email !== 'string' || typeof password !== 'string') {
+        if (typeof identifier !== 'string' || typeof password !== 'string') {
+          return null;
+        }
+        const trimmedIdentifier = identifier.trim();
+        if (!trimmedIdentifier) {
           return null;
         }
 
-        // logic to verify if user exists
+        // Determine lookup strategy
         const adapter = await getAdapter();
-        const user = await adapter.getUserByEmail(email);
+        let user = null;
+
+        if (trimmedIdentifier.includes('@')) {
+          user = await adapter.getUserByEmail(trimmedIdentifier.toLowerCase());
+        } else {
+          // Try to resolve by phone via users collection
+          const db = await getAdapter();
+          if (db?.getUserByPhone) {
+            user = await db.getUserByPhone(trimmedIdentifier);
+          }
+        }
+
+        if (!user && !trimmedIdentifier.includes('@')) {
+          try {
+            const mongoClient = new MongoClient(mongoUri);
+            await mongoClient.connect();
+            const mongoDb = mongoClient.db(mongoDbName);
+            const usersCollection = mongoDb.collection('users');
+            const matchedUser = await usersCollection.findOne({ phone: trimmedIdentifier });
+            if (matchedUser?.auth_user_id) {
+              user = await adapter.getUser(matchedUser.auth_user_id);
+            }
+            await mongoClient.close();
+          } catch (err) {
+            console.error('[AUTH] Phone lookup failed:', err);
+          }
+        }
+
         if (!user) {
           return null;
         }

@@ -5,8 +5,8 @@ import { hash } from "argon2";
  * User registration endpoint
  * POST /api/auth/register
  *
- * Required: name, phone, pension_number, email (for auth), password (for auth)
- * Optional: date_of_birth, preferred_language
+ * Required: name, phone, pension_number, password
+ * Optional: email, date_of_birth, preferred_language
  */
 export async function POST(request) {
   try {
@@ -24,19 +24,18 @@ export async function POST(request) {
       preferred_language = "en",
     } = body;
 
-    if (!name || !phone || !pension_number || !email || !password) {
+    if (!name || !phone || !pension_number || !password) {
       return Response.json(
         {
           success: false,
           error: {
             code: "MISSING_REQUIRED_FIELDS",
-            message: "Name, phone number, pension number, email, and password are required",
+            message: "Name, phone number, pension number, and password are required",
             details: {
               name: !name ? "Name is required" : null,
               phone: !phone ? "Phone number is required" : null,
               pension_number: !pension_number ? "Pension number is required" : null,
-              email: !email ? "Email is required for authentication" : null,
-              password: !password ? "Password is required for authentication" : null,
+              password: !password ? "Password is required" : null,
             },
           },
         },
@@ -59,9 +58,11 @@ export async function POST(request) {
       );
     }
 
-    if (email) {
+    const normalizedEmail = typeof email === 'string' && email.trim() ? email.trim().toLowerCase() : null;
+
+    if (normalizedEmail) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (!emailRegex.test(normalizedEmail)) {
         return Response.json(
           {
             success: false,
@@ -140,8 +141,8 @@ export async function POST(request) {
       );
     }
 
-    if (email) {
-      const existingEmail = await authUsers.findOne({ email });
+    if (normalizedEmail) {
+      const existingEmail = await authUsers.findOne({ email: normalizedEmail });
       if (existingEmail) {
         console.warn('[REGISTER] Email already exists');
         return Response.json(
@@ -163,8 +164,8 @@ export async function POST(request) {
     const userDoc = {
       id: userId,
       name,
-      phone,
-      email: email || null,
+  phone: phone.trim(),
+  email: normalizedEmail || null,
       date_of_birth: date_of_birth || null,
       pension_number,
       preferred_language,
@@ -185,7 +186,7 @@ export async function POST(request) {
     const authUserId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
     const authUserDoc = {
       id: authUserId,
-      email,
+      email: normalizedEmail || null,
       emailVerified: null,
       name,
       image: null,

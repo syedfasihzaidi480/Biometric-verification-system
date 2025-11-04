@@ -11,10 +11,22 @@
     }
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
+    "src/**/*",
+    "App.tsx",
+    "index.tsx",
+    "index.web.tsx",
+    "__tests__/**/*",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "nativewind-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/node_modules/**",
+    "caches",
+    ".expo",
+    "patches",
+    "metro-virtual",
+    "**/*.json"
   ]
 }

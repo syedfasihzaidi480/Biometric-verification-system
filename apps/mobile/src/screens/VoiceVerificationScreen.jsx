@@ -13,7 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Mic, Square, RotateCcw, CheckCircle, Volume2 } from 'lucide-react-native';
-import { Audio } from 'expo-audio';
+import { Audio } from 'expo-av';
 import { useTranslation } from '@/i18n/useTranslation';
 import { apiFetch } from '@/utils/api';
 import useUser from '@/utils/auth/useUser';
@@ -84,7 +84,7 @@ export default function VoiceVerificationScreen() {
 
   const requestPermissions = async () => {
     try {
-      const permission = await Audio.requestPermissionsAsync();
+  const permission = await Audio.requestPermissionsAsync();
       if (permission.status !== 'granted') {
         Alert.alert(
           t('permissions.microphone.title'),

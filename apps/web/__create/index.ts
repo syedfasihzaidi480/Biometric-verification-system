@@ -4,7 +4,7 @@ import { skipCSRFCheck } from '@auth/core';
 import Credentials from '@auth/core/providers/credentials';
 import { authHandler, initAuthConfig } from '@hono/auth-js';
 import { Pool, neonConfig } from '@neondatabase/serverless';
-import { MongoClient } from 'mongodb';
+import { Db, MongoClient } from 'mongodb';
 import { verify } from 'argon2';
 import { Hono } from 'hono';
 import { contextStorage, getContext } from 'hono/context-storage';
@@ -37,12 +37,14 @@ for (const method of ['log', 'info', 'warn', 'error', 'debug'] as const) {
 }
 
 let adapter: any;
+let mongoClient: MongoClient | null = null;
+let mongoDb: Db | null = null;
 if (process.env.MONGODB_URI) {
-  const mongoClient = new MongoClient(process.env.MONGODB_URI);
+  mongoClient = new MongoClient(process.env.MONGODB_URI);
   // Lazy connect; driver will connect on first operation
-  const db = mongoClient.db(process.env.MONGODB_DB || 'auth');
+  mongoDb = mongoClient.db(process.env.MONGODB_DB || 'auth');
   const MongoAdapter = (await import('./mongo-adapter')).default;
-  adapter = MongoAdapter(db);
+  adapter = MongoAdapter(mongoDb);
 } else {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -91,9 +93,10 @@ app.use(
     basePath: '/api/auth',
     trustHost: true,
     pages: {
-      // Route all sign-in flows to the Admin sign-in so role checks run
-      signIn: '/admin/signin',
-      signOut: '/admin/signin',
+      // Use the end-user sign-in screen by default so non-admin flows stay in-app
+      signIn: '/account/signin',
+      signOut: '/account/signin',
+      error: '/account/signin',
     },
   // Use Auth.js sentinel to disable CSRF protection (already imported)
   skipCSRFCheck,
@@ -132,35 +135,111 @@ app.use(
         id: 'credentials',
         name: 'Credentials Sign in',
         credentials: {
+          identifier: { label: 'Email or Phone', type: 'text' },
           email: { label: 'Email', type: 'email' },
+          phone: { label: 'Phone', type: 'text' },
           password: { label: 'Password', type: 'password' },
         },
         authorize: async (credentials) => {
-          console.log('[SIGN-IN] Authorize called with email:', credentials?.email);
-          const { email, password } = (credentials ?? {}) as { email?: string; password?: string };
-          if (!email || !password) {
-            console.error('[SIGN-IN] Missing email or password');
+          const { identifier, email, phone, password } = (credentials ?? {}) as {
+            identifier?: string;
+            email?: string;
+            phone?: string;
+            password?: string;
+          };
+
+          if (!password || typeof password !== 'string') {
+            console.error('[SIGN-IN] Missing password');
             return null;
           }
-          console.log('[SIGN-IN] Looking up user by email...');
-          const user = await adapter.getUserByEmail(email);
+
+          const rawIdentifier =
+            (typeof identifier === 'string' && identifier) ||
+            (typeof email === 'string' && email) ||
+            (typeof phone === 'string' && phone) ||
+            '';
+
+          const trimmedIdentifier = rawIdentifier.trim();
+          if (!trimmedIdentifier) {
+            console.error('[SIGN-IN] Missing identifier');
+            return null;
+          }
+
+          const normalizedEmail = (typeof email === 'string' && email.trim()) ||
+            (trimmedIdentifier.includes('@') ? trimmedIdentifier.toLowerCase() : '');
+          const normalizedPhone = (typeof phone === 'string' && phone.trim()) ||
+            (!trimmedIdentifier.includes('@') ? trimmedIdentifier : '');
+
+          console.log('[SIGN-IN] Authorize called with identifier:', trimmedIdentifier);
+
+          let user: any = null;
+
+          if (normalizedEmail) {
+            try {
+              console.log('[SIGN-IN] Looking up user by email...');
+              user = await adapter.getUserByEmail(normalizedEmail);
+            } catch (err) {
+              console.error('[SIGN-IN] Email lookup failed:', err);
+            }
+          }
+
+          if (!user && normalizedPhone && mongoDb) {
+            try {
+              console.log('[SIGN-IN] Looking up user by phone...');
+              const usersCollection = mongoDb.collection('users');
+              const authUsersCollection = mongoDb.collection('auth_users');
+              const authAccountsCollection = mongoDb.collection('auth_accounts');
+
+              const profile = await usersCollection.findOne({ phone: normalizedPhone });
+              if (profile?.auth_user_id) {
+                const authUser = await authUsersCollection.findOne({ id: profile.auth_user_id });
+                const authAccount = await authAccountsCollection.findOne({
+                  userId: profile.auth_user_id,
+                  provider: 'credentials',
+                });
+
+                if (authUser && authAccount?.password) {
+                  user = {
+                    id: authUser.id,
+                    name: authUser.name,
+                    email: authUser.email,
+                    emailVerified: authUser.emailVerified,
+                    image: authUser.image,
+                    accounts: [
+                      {
+                        provider: 'credentials',
+                        providerAccountId: authAccount.providerAccountId ?? authAccount.userId,
+                        password: authAccount.password,
+                      },
+                    ],
+                  };
+                }
+              }
+            } catch (err) {
+              console.error('[SIGN-IN] Phone lookup failed:', err);
+            }
+          }
+
           if (!user) {
-            console.error('[SIGN-IN] User not found:', email);
+            console.error('[SIGN-IN] User not found for identifier:', trimmedIdentifier);
             return null;
           }
+
           console.log('[SIGN-IN] User found:', user.id);
-          const matchingAccount = (user as any).accounts?.find((a: any) => a.provider === 'credentials');
+          const matchingAccount = user.accounts?.find((a: any) => a.provider === 'credentials');
           const accountPassword = matchingAccount?.password;
           if (!accountPassword) {
             console.error('[SIGN-IN] No credentials account found for user');
             return null;
           }
+
           console.log('[SIGN-IN] Verifying password...');
           const isValid = await verify(accountPassword, password);
           if (!isValid) {
             console.error('[SIGN-IN] Invalid password');
             return null;
           }
+
           console.log('[SIGN-IN] Authentication successful!');
           return user;
         },

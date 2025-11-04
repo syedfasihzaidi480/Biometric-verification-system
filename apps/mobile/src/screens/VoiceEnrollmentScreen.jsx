@@ -20,7 +20,7 @@ import {
   RotateCcw,
   CheckCircle,
 } from "lucide-react-native";
-import { Audio } from "expo-audio";
+import { Audio } from "expo-av";
 import { useTranslation } from "@/i18n/useTranslation";
 import { useUpload } from "@/utils/useUpload";
 import { apiFetch, apiFetchJson } from "@/utils/api";
@@ -110,7 +110,7 @@ export default function VoiceEnrollmentScreen() {
 
   const requestPermissions = async () => {
     try {
-      const permission = await Audio.requestPermissionsAsync();
+  const permission = await Audio.requestPermissionsAsync();
       if (permission.status !== "granted") {
         Alert.alert(
           t("permissions.microphone.title"),

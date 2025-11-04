@@ -22,6 +22,7 @@ describe('LoginScreen', () => {
 
     await act(async () => {
       await credentials.signInWithCredentials({
+        identifier: 'test@example.com',
         email: 'test@example.com',
         password: 'password',
         callbackUrl: '/(tabs)',
@@ -29,6 +30,7 @@ describe('LoginScreen', () => {
     });
 
     expect(spy).toHaveBeenCalledWith({
+      identifier: 'test@example.com',
       email: 'test@example.com',
       password: 'password',
       callbackUrl: '/(tabs)',
