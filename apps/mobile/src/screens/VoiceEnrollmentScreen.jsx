@@ -11,6 +11,7 @@ import {
   Linking,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
+import * as FileSystem from "expo-file-system";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -30,8 +31,10 @@ export default function VoiceEnrollmentScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { user } = useUser();
-  const { userId: paramUserId, userName, dateOfBirth } = useLocalSearchParams();
+  const { userId: paramUserId, userName: paramUserName, dateOfBirth: paramDOB } = useLocalSearchParams();
   const userId = paramUserId || user?.id;
+  const userName = paramUserName || user?.name || 'User';
+  const dateOfBirth = paramDOB || user?.date_of_birth || 'Unknown';
   const [upload, { loading: uploadLoading }] = useUpload();
 
   const [currentSample, setCurrentSample] = useState(1);
@@ -211,23 +214,22 @@ export default function VoiceEnrollmentScreen() {
     setIsProcessing(true);
 
     try {
-      // Create form data for upload
-      const formData = new FormData();
-      formData.append("userId", userId);
-      formData.append("questionNumber", currentSample);
-      formData.append("expectedAnswer", getExpectedAnswer());
-      formData.append("audioFile", {
-        uri: audioUri,
-        type: "audio/m4a",
-        name: `voice_sample_${currentSample}.m4a`,
+      // Read the audio as base64 and send JSON instead of FormData
+      const base64 = await FileSystem.readAsStringAsync(audioUri, {
+        encoding: FileSystem.EncodingType.Base64,
       });
-      if (sessionToken) {
-        formData.append("sessionToken", sessionToken);
-      }
 
       const response = await apiFetch("/api/voice/enroll", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: {
+          userId: String(userId),
+          questionNumber: String(currentSample),
+          expectedAnswer: getExpectedAnswer(),
+          sessionToken: sessionToken || undefined,
+          base64,
+          mimeType: "audio/m4a",
+        },
       });
 
       const result = await response.json();

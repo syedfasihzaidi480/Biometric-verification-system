@@ -10,6 +10,7 @@ import {
   Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import * as FileSystem from 'expo-file-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Mic, Square, RotateCcw, CheckCircle, Volume2 } from 'lucide-react-native';
@@ -22,8 +23,10 @@ export default function VoiceVerificationScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { user } = useUser();
-  const { userId: paramUserId, userName, dateOfBirth, returnUrl = "/dashboard" } = useLocalSearchParams();
+  const { userId: paramUserId, userName: paramUserName, dateOfBirth: paramDOB, returnUrl = "/dashboard" } = useLocalSearchParams();
   const userId = paramUserId || user?.id;
+  const userName = paramUserName || user?.name || 'User';
+  const dateOfBirth = paramDOB || user?.date_of_birth || 'Unknown';
   
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -37,23 +40,14 @@ export default function VoiceVerificationScreen() {
   const durationInterval = useRef(null);
   const pulseAnimation = useRef(new Animated.Value(1)).current;
 
-  // Get today's date in a readable format
-  const getTodaysDate = () => {
-    const today = new Date();
-    const options = { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    };
-    return today.toLocaleDateString('en-US', options);
-  };
-
-  // Generate a random verification phrase (from the 3 questions)
+  // Generate a simple verification phrase that's easy to repeat
   const getVerificationPhrase = () => {
     const phrases = [
-      `My name is ${userName}`,
-      `My date of birth is ${dateOfBirth}`,
-      `Today's date is ${getTodaysDate()}`
+      'My voice is my password',
+      'I verify my identity with my voice',
+      'This is my voice verification',
+      'I am who I say I am',
+      'My voice confirms my identity'
     ];
     
     const randomIndex = Math.floor(Math.random() * phrases.length);
@@ -63,6 +57,19 @@ export default function VoiceVerificationScreen() {
   const [verificationPhrase] = useState(getVerificationPhrase());
 
   useEffect(() => {
+    // Check if userId is available
+    if (!userId) {
+      Alert.alert(
+        'Error',
+        'User information not found. Please sign in again.',
+        [{ text: 'OK', onPress: () => router.back() }]
+      );
+      return;
+    }
+    
+    // Check enrollment status
+    checkEnrollmentStatus();
+    
     // Request audio permissions on mount
     requestPermissions();
     
@@ -72,7 +79,41 @@ export default function VoiceVerificationScreen() {
         clearInterval(durationInterval.current);
       }
     };
-  }, []);
+  }, [userId]);
+
+  const checkEnrollmentStatus = async () => {
+    try {
+      const response = await apiFetch(`/api/voice/enrollment-status?userId=${userId}`, {
+        method: 'GET',
+      });
+      const result = await response.json();
+      
+      if (!result.success || !result.data?.isEnrolled) {
+        Alert.alert(
+          'Voice Enrollment Required',
+          'You need to enroll your voice before you can verify. Would you like to enroll now?',
+          [
+            { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
+            { 
+              text: 'Enroll Now', 
+              onPress: () => router.replace({
+                pathname: '/voice-enrollment',
+                params: { 
+                  userId,
+                  userName,
+                  dateOfBirth,
+                  returnUrl: returnUrl
+                }
+              })
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      console.warn('[VoiceVerification] Could not check enrollment status:', error);
+      // Continue anyway - the verification will catch it if not enrolled
+    }
+  };
 
   useEffect(() => {
     if (isRecording) {
@@ -187,19 +228,23 @@ export default function VoiceVerificationScreen() {
     setAttempts(prev => prev + 1);
 
     try {
-      // Create form data for upload
-      const formData = new FormData();
-  formData.append('userId', String(userId));
-      formData.append('expectedPhrase', verificationPhrase);
-      formData.append('audioFile', {
-        uri: audioUri,
-        type: 'audio/m4a',
-        name: `voice_verification.m4a`,
+      // Read the recorded file as base64 and send JSON payload
+      const base64 = await FileSystem.readAsStringAsync(audioUri, {
+        encoding: FileSystem.EncodingType.Base64,
       });
+
+      console.log('[VoiceVerification] Sending verification with userId:', userId);
+      console.log('[VoiceVerification] User from session:', user);
 
       const response = await apiFetch('/api/voice/verify', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          userId: String(userId),
+          expectedPhrase: verificationPhrase,
+          base64,
+          mimeType: 'audio/m4a',
+        },
       });
 
       const result = await response.json();
@@ -231,10 +276,33 @@ export default function VoiceVerificationScreen() {
           }
         }
       } else {
-        Alert.alert(
-          t('common.error'), 
-          result.error?.message || 'Verification failed. Please try again.'
-        );
+        // Check if the error is because voice enrollment is not complete
+        if (result.error?.code === 'VOICE_NOT_ENROLLED') {
+          Alert.alert(
+            'Voice Enrollment Required',
+            'You need to enroll your voice before you can verify. Would you like to enroll now?',
+            [
+              { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
+              { 
+                text: 'Enroll Now', 
+                onPress: () => router.push({
+                  pathname: '/voice-enrollment',
+                  params: { 
+                    userId,
+                    userName,
+                    dateOfBirth,
+                    returnUrl: returnUrl
+                  }
+                })
+              }
+            ]
+          );
+        } else {
+          Alert.alert(
+            t('common.error'), 
+            result.error?.message || 'Verification failed. Please try again.'
+          );
+        }
       }
     } catch (error) {
       console.error('Failed to process recording:', error);
@@ -309,10 +377,10 @@ export default function VoiceVerificationScreen() {
                 Voice ID Verification
               </Text>
               <Text style={styles.subtitle}>
-                Verify your identity with your voice
+                Confirm your identity by speaking
               </Text>
               <Text style={styles.instructions}>
-                Please say the following phrase clearly:
+                Please read the following phrase clearly and naturally:
               </Text>
             </View>
 

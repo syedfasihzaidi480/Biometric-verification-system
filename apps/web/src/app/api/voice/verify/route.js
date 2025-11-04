@@ -9,16 +9,33 @@ import { getMongoDb } from '@/app/api/utils/mongo';
  */
 export async function POST(request) {
   try {
-    const formData = await request.formData();
-    const userId = formData.get('userId');
-    const audioFile = formData.get('audioFile');
-    
-    if (!userId || !audioFile) {
+    const contentType = request.headers.get('content-type') || '';
+    let userId;
+    let audioBuffer;
+    let base64;
+
+    if (contentType.includes('application/json')) {
+      const data = await request.json();
+      userId = data.userId;
+      base64 = data.base64;
+      if (base64) {
+        audioBuffer = Buffer.from(base64, 'base64');
+      }
+    } else {
+      const formData = await request.formData();
+      userId = formData.get('userId');
+      const audioFile = formData.get('audioFile');
+      if (audioFile) {
+        audioBuffer = Buffer.from(await audioFile.arrayBuffer());
+      }
+    }
+
+    if (!userId || (!audioBuffer && !base64)) {
       return Response.json({
         success: false,
         error: {
           code: 'MISSING_REQUIRED_FIELDS',
-          message: 'User ID and audio file are required'
+          message: 'User ID and audio data are required'
         }
       }, { status: 400 });
     }
@@ -28,9 +45,13 @@ export async function POST(request) {
     const voiceProfiles = db.collection('voice_profiles');
     const auditLogs = db.collection('audit_logs');
 
-    const user = await users.findOne({ id: userId });
+    console.log('[VOICE_VERIFY] Looking up user with auth_user_id:', userId);
+
+    // The userId from the session is the auth_user_id, so look up by that field
+    const user = await users.findOne({ auth_user_id: userId });
 
     if (!user) {
+      console.error('[VOICE_VERIFY] User not found with auth_user_id:', userId);
       return Response.json({
         success: false,
         error: {
@@ -39,7 +60,11 @@ export async function POST(request) {
         }
       }, { status: 404 });
     }
-    const voiceProfile = await voiceProfiles.findOne({ user_id: userId });
+    
+    console.log('[VOICE_VERIFY] User found:', user.id, user.name);
+    
+    // Use the actual user.id for voice profile lookup
+    const voiceProfile = await voiceProfiles.findOne({ user_id: user.id });
 
     if (!voiceProfile || !voiceProfile.is_enrolled || !voiceProfile.voice_model_ref) {
       return Response.json({
@@ -54,9 +79,10 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // Upload audio file
-    const audioBuffer = Buffer.from(await audioFile.arrayBuffer());
-    const uploadResult = await upload({ buffer: audioBuffer });
+    // Upload audio data (buffer or base64)
+    const uploadResult = await upload(
+      audioBuffer ? { buffer: audioBuffer } : { base64 }
+    );
     
     if (uploadResult.error) {
       return Response.json({
@@ -71,8 +97,8 @@ export async function POST(request) {
 
     // Call ML service for voice verification
     const mlResponse = await callMLVerificationService(
-      uploadResult.url, 
-      user.voice_model_ref,
+      uploadResult.url,
+      voiceProfile.voice_model_ref,
       userId
     );
     
@@ -91,9 +117,9 @@ export async function POST(request) {
     const isMatch = mlResponse.data.isMatch;
     const threshold = 0.75; // Configurable threshold
 
-    // Update voice profile with latest match score
+    // Update voice profile with latest match score (use user.id for MongoDB operations)
     await voiceProfiles.updateOne(
-      { user_id: userId },
+      { user_id: user.id },
       {
         $set: {
           last_match_score: matchScore,
@@ -103,7 +129,7 @@ export async function POST(request) {
     );
 
     await auditLogs.insertOne({
-      user_id: userId,
+      user_id: user.id,
       action: 'VOICE_VERIFICATION_ATTEMPT',
       details: {
         matchScore: matchScore,

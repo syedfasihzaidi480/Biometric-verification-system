@@ -9,17 +9,36 @@ import { getMongoDb } from '@/app/api/utils/mongo';
  */
 export async function POST(request) {
   try {
-    const formData = await request.formData();
-    const userId = formData.get('userId');
-    const audioFile = formData.get('audioFile');
-    const sessionToken = formData.get('sessionToken');
-    
-    if (!userId || !audioFile) {
+    const contentType = request.headers.get('content-type') || '';
+    let userId;
+    let audioBuffer;
+    let base64;
+    let sessionToken;
+
+    if (contentType.includes('application/json')) {
+      const data = await request.json();
+      userId = data.userId;
+      sessionToken = data.sessionToken;
+      base64 = data.base64;
+      if (base64) {
+        audioBuffer = Buffer.from(base64, 'base64');
+      }
+    } else {
+      const formData = await request.formData();
+      userId = formData.get('userId');
+      sessionToken = formData.get('sessionToken');
+      const audioFile = formData.get('audioFile');
+      if (audioFile) {
+        audioBuffer = Buffer.from(await audioFile.arrayBuffer());
+      }
+    }
+
+    if (!userId || (!audioBuffer && !base64)) {
       return Response.json({
         success: false,
         error: {
           code: 'MISSING_REQUIRED_FIELDS',
-          message: 'User ID and audio file are required'
+          message: 'User ID and audio data are required'
         }
       }, { status: 400 });
     }
@@ -30,7 +49,8 @@ export async function POST(request) {
     const voiceProfiles = db.collection('voice_profiles');
     const auditLogs = db.collection('audit_logs');
 
-    const user = await users.findOne({ id: userId });
+    // The userId from the session is the auth_user_id, so look up by that field
+    const user = await users.findOne({ auth_user_id: userId });
 
     if (!user) {
       return Response.json({
@@ -49,7 +69,7 @@ export async function POST(request) {
     if (sessionToken) {
       session = await sessionsCollection.findOne({
         session_token: sessionToken,
-        user_id: userId,
+        user_id: user.id, // Use actual user.id for MongoDB operations
         status: 'active',
         expires_at: { $gt: nowIso },
       });
@@ -61,7 +81,7 @@ export async function POST(request) {
       const expiresAtIso = new Date(now.getTime() + 30 * 60 * 1000).toISOString();
       const sessionDoc = {
         id: sessionId,
-        user_id: userId,
+        user_id: user.id, // Use actual user.id for MongoDB operations
         session_token: newSessionToken,
         status: 'active',
         samples_required: 3,
@@ -74,9 +94,10 @@ export async function POST(request) {
       session = sessionDoc;
     }
 
-    // Upload audio file
-    const audioBuffer = Buffer.from(await audioFile.arrayBuffer());
-    const uploadResult = await upload({ buffer: audioBuffer });
+    // Upload audio data
+    const uploadResult = await upload(
+      audioBuffer ? { buffer: audioBuffer } : { base64 }
+    );
     
     if (uploadResult.error) {
       return Response.json({
@@ -127,11 +148,11 @@ export async function POST(request) {
     };
 
     await voiceProfiles.updateOne(
-      { user_id: userId },
+      { user_id: user.id },
       {
         $setOnInsert: {
           id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()),
-          user_id: userId,
+          user_id: user.id,
           voice_model_ref: null,
           enrollment_samples_count: 0,
           is_enrolled: false,
@@ -145,7 +166,7 @@ export async function POST(request) {
 
     if (isComplete) {
       await voiceProfiles.updateOne(
-        { user_id: userId },
+        { user_id: user.id },
         {
           $set: {
             voice_model_ref: mlResponse.data.modelId,
@@ -158,7 +179,7 @@ export async function POST(request) {
       );
 
       await auditLogs.insertOne({
-        user_id: userId,
+        user_id: user.id,
         action: 'VOICE_ENROLLED',
         details: {
           sessionId: session.id,

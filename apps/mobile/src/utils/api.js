@@ -1,9 +1,9 @@
 import { Platform } from 'react-native';
 
 // Compute API base URL for mobile (Expo) environments
-// Prefer EXPO_PUBLIC_API_URL; otherwise use sensible localhost defaults per platform
-export const API_BASE = (process.env.EXPO_PUBLIC_API_URL && process.env.EXPO_PUBLIC_API_URL.replace(/\/$/, ''))
-  || (Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000');
+// Prefer EXPO_PUBLIC_API_URL; support legacy EXPO_PUBLIC_BASE_URL; else use sensible localhost defaults
+const ENV_API = (process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_BASE_URL || '').replace(/\/$/, '');
+export const API_BASE = ENV_API || (Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://localhost:4000');
 
 // Helper to build absolute URL from a path or pass-through absolute URLs
 export const toApiUrl = (path) => {
@@ -44,8 +44,13 @@ export async function apiFetch(path, options = {}) {
 
   opts.headers = headers;
 
-  const res = await fetch(url, opts);
-  return res;
+  try {
+    const res = await fetch(url, opts);
+    return res;
+  } catch (e) {
+    console.warn('[apiFetch] Network error', { url, method: opts.method || 'GET', message: e?.message });
+    throw e;
+  }
 }
 
 // Convenience to fetch JSON with basic error surface

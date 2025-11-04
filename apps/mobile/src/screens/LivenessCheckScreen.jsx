@@ -11,7 +11,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Camera, RotateCw, CheckCircle } from 'lucide-react-native';
-import { Camera as ExpoCamera } from 'expo-camera';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as FileSystem from 'expo-file-system';
 import { useTranslation } from '@/i18n/useTranslation';
 import useUser from '@/utils/auth/useUser';
 import { apiFetch } from '@/utils/api';
@@ -24,7 +25,7 @@ export default function LivenessCheckScreen() {
   const params = useLocalSearchParams();
   const resolvedUserId = params?.userId || user?.id;
 
-  const [hasPermission, setHasPermission] = useState(null);
+  const [permission, requestPermission] = useCameraPermissions();
   const [currentInstruction, setCurrentInstruction] = useState('ready');
   const [instructionStep, setInstructionStep] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -41,21 +42,18 @@ export default function LivenessCheckScreen() {
   ];
 
   useEffect(() => {
-    (async () => {
-      const { status } = await ExpoCamera.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          t('permissions.camera.title'),
-          t('permissions.camera.message'),
-          [
-            { text: t('common.cancel'), style: 'cancel' },
-            { text: t('permissions.openSettings'), onPress: () => Linking.openSettings() },
-          ],
-        );
-      }
-      setHasPermission(status === 'granted');
-    })();
-  }, [t]);
+    if (permission && !permission.granted) {
+      Alert.alert(
+        t('permissions.camera.title'),
+        t('permissions.camera.message'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('permissions.allowAccess'), onPress: () => requestPermission() },
+          { text: t('permissions.openSettings'), onPress: () => Linking.openSettings() },
+        ],
+      );
+    }
+  }, [permission, t]);
 
   const handleConsent = () => {
     setShowConsent(false);
@@ -93,10 +91,11 @@ export default function LivenessCheckScreen() {
         base64: false,
       });
       
-      console.log('Photo captured:', photo.uri);
+      console.log('Photo captured:', photo?.uri);
       return photo;
     } catch (error) {
       console.error('Error capturing photo:', error);
+      return null;
     }
   };
 
@@ -118,17 +117,21 @@ export default function LivenessCheckScreen() {
         throw new Error('No selfie captured');
       }
 
-      const formData = new FormData();
-      formData.append('userId', String(resolvedUserId));
-      formData.append('imageFile', {
-        uri: lastSelfieUri,
-        type: 'image/jpeg',
-        name: 'selfie.jpg',
+      // Read the image as base64 and send JSON payload
+      const base64 = await FileSystem.readAsStringAsync(lastSelfieUri, {
+        encoding: FileSystem.EncodingType.Base64,
       });
+
+      console.log('[LivenessCheck] Sending liveness check with userId:', resolvedUserId);
 
       const res = await apiFetch('/api/liveness/check', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          userId: String(resolvedUserId),
+          base64,
+          mimeType: 'image/jpeg',
+        },
       });
       const result = await res.json();
 
@@ -216,7 +219,7 @@ export default function LivenessCheckScreen() {
     );
   }
 
-  if (hasPermission === null) {
+  if (!permission) {
     return (
       <View style={[styles.container, styles.centered]}>
         <Text>Requesting camera permission...</Text>
@@ -224,13 +227,19 @@ export default function LivenessCheckScreen() {
     );
   }
 
-  if (hasPermission === false) {
+  if (!permission.granted) {
     return (
       <View style={[styles.container, styles.centered]}>
         <Text style={styles.permissionText}>{t('permissions.camera.title')}</Text>
         <Text style={styles.permissionMessage}>{t('permissions.camera.message')}</Text>
         <TouchableOpacity
           style={styles.permissionButton}
+          onPress={() => requestPermission()}
+        >
+          <Text style={styles.permissionButtonText}>{t('permissions.allowAccess')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.permissionButton, styles.permissionButtonSecondary]}
           onPress={() => Linking.openSettings()}
         >
           <Text style={styles.permissionButtonText}>{t('permissions.openSettings')}</Text>
@@ -256,9 +265,9 @@ export default function LivenessCheckScreen() {
       </View>
 
       {/* Camera */}
-      <ExpoCamera
+      <CameraView
         style={styles.camera}
-        type={ExpoCamera.Constants.Type.front}
+        facing="front"
         ref={cameraRef}
       >
         {/* Face outline overlay */}
@@ -288,7 +297,7 @@ export default function LivenessCheckScreen() {
             </View>
           )}
         </View>
-      </ExpoCamera>
+      </CameraView>
 
       {/* Controls */}
       <View style={styles.controls}>
@@ -522,6 +531,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
+    marginBottom: 12,
+  },
+  permissionButtonSecondary: {
+    backgroundColor: '#6B7280',
   },
   permissionButtonText: {
     color: '#FFFFFF',

@@ -9,16 +9,55 @@ import { getMongoDb } from '@/app/api/utils/mongo';
  */
 export async function POST(request) {
   try {
-    const formData = await request.formData();
-    const userId = formData.get('userId');
-    const imageFile = formData.get('imageFile');
+    const contentType = request.headers.get('content-type') || '';
+    let userId;
+    let imageBuffer;
+    let base64;
+
+    if (contentType.includes('application/json')) {
+      const data = await request.json();
+      userId = data.userId;
+      base64 = data.base64;
+      if (base64) {
+        imageBuffer = Buffer.from(base64, 'base64');
+      }
+    } else {
+      const formData = await request.formData();
+      userId = formData.get('userId');
+      const imageFile = formData.get('imageFile');
+      if (imageFile) {
+        // Validate image file
+        if (!imageFile.type.startsWith('image/')) {
+          return Response.json({
+            success: false,
+            error: {
+              code: 'INVALID_FILE_TYPE',
+              message: 'File must be an image'
+            }
+          }, { status: 400 });
+        }
+
+        // Check file size (max 10MB)
+        if (imageFile.size > 10 * 1024 * 1024) {
+          return Response.json({
+            success: false,
+            error: {
+              code: 'FILE_TOO_LARGE',
+              message: 'Image file must be less than 10MB'
+            }
+          }, { status: 400 });
+        }
+        
+        imageBuffer = Buffer.from(await imageFile.arrayBuffer());
+      }
+    }
     
-    if (!userId || !imageFile) {
+    if (!userId || (!imageBuffer && !base64)) {
       return Response.json({
         success: false,
         error: {
           code: 'MISSING_REQUIRED_FIELDS',
-          message: 'User ID and image file are required'
+          message: 'User ID and image data are required'
         }
       }, { status: 400 });
     }
@@ -28,9 +67,13 @@ export async function POST(request) {
     const verificationRequests = db.collection('verification_requests');
     const auditLogs = db.collection('audit_logs');
 
-    const user = await users.findOne({ id: userId });
+    console.log('[LIVENESS_CHECK] Looking up user with auth_user_id:', userId);
+
+    // The userId from the session is the auth_user_id
+    const user = await users.findOne({ auth_user_id: userId });
 
     if (!user) {
+      console.error('[LIVENESS_CHECK] User not found with auth_user_id:', userId);
       return Response.json({
         success: false,
         error: {
@@ -40,31 +83,12 @@ export async function POST(request) {
       }, { status: 404 });
     }
 
-    // Validate image file
-    if (!imageFile.type.startsWith('image/')) {
-      return Response.json({
-        success: false,
-        error: {
-          code: 'INVALID_FILE_TYPE',
-          message: 'File must be an image'
-        }
-      }, { status: 400 });
-    }
+    console.log('[LIVENESS_CHECK] User found:', user.id, user.name);
 
-    // Check file size (max 10MB)
-    if (imageFile.size > 10 * 1024 * 1024) {
-      return Response.json({
-        success: false,
-        error: {
-          code: 'FILE_TOO_LARGE',
-          message: 'Image file must be less than 10MB'
-        }
-      }, { status: 400 });
-    }
-
-    // Upload image file
-    const imageBuffer = Buffer.from(await imageFile.arrayBuffer());
-    const uploadResult = await upload({ buffer: imageBuffer });
+    // Upload image data (buffer or base64)
+    const uploadResult = await upload(
+      imageBuffer ? { buffer: imageBuffer } : { base64 }
+    );
     
     if (uploadResult.error) {
       return Response.json({
@@ -77,8 +101,8 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
-    // Call ML service for liveness detection
-    const mlResponse = await callMLLivenessService(uploadResult.url, userId);
+    // Call ML service for liveness detection (use user.id for MongoDB operations)
+    const mlResponse = await callMLLivenessService(uploadResult.url, user.id);
     
     if (!mlResponse.success) {
       return Response.json({
@@ -98,7 +122,7 @@ export async function POST(request) {
     // Create or update verification request
     const nowIso = new Date().toISOString();
     const existingPending = await verificationRequests
-      .find({ user_id: userId, status: 'pending' })
+      .find({ user_id: user.id, status: 'pending' })
       .sort({ created_at: -1 })
       .limit(1)
       .toArray();
@@ -108,7 +132,7 @@ export async function POST(request) {
       const reqId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
       const reqDoc = {
         id: reqId,
-        user_id: userId,
+        user_id: user.id,
         liveness_image_url: uploadResult.url,
         status: 'pending',
         created_at: nowIso,
@@ -126,7 +150,7 @@ export async function POST(request) {
     }
 
     await auditLogs.insertOne({
-      user_id: userId,
+      user_id: user.id,
       action: 'LIVENESS_CHECK',
       details: {
         livenessScore: livenessScore,
