@@ -4,6 +4,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "react-router dev --host --port 4000",
+		"cleanup:preserve-superadmin": "node ./scripts/cleanup-preserve-super-admin.cjs",
+		"db:indexes": "node ./utils/create-indexes.cjs",
 		"typecheck": "react-router typegen && tsc --noEmit"
 	},
 	"dependencies": {

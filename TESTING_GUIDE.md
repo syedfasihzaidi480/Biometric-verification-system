@@ -22,11 +22,11 @@ npx expo start -c
 1. Scan QR code from Expo
 2. Navigate to Registration screen
 3. Fill in the form:
-   - **Full Name**: Hassan
+  - **Full Name**: Example User
    - **Date of Birth**: 08/02/2005
    - **Pension Number**: 626816
    - **Phone Number**: +923708270136
-   - **Email**: syed.hassan.shah4554@gmail.com
+  - **Email**: example@example.com
    - **Password**: Test123!
 4. Click "Create Account"
 5. **Expected**: Should redirect to voice enrollment (no error)
@@ -154,8 +154,8 @@ To reset and test again, delete from MongoDB:
 
 ```javascript
 // In MongoDB Atlas or Compass
-db.users.deleteMany({ email: "syed.hassan.shah4554@gmail.com" })
-db.auth_users.deleteMany({ email: "syed.hassan.shah4554@gmail.com" })
+db.users.deleteMany({ email: "<user email>" })
+db.auth_users.deleteMany({ email: "<user email>" })
 db.auth_accounts.deleteMany({ }) // Be careful with this!
 db.voice_profiles.deleteMany({ })
 db.audit_logs.deleteMany({ action: "USER_REGISTERED" })

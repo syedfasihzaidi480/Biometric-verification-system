@@ -78,6 +78,7 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],
   },
   clearScreen: false,
+  publicDir: 'public',
   server: {
     allowedHosts: true,
     host: '0.0.0.0',

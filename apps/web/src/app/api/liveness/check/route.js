@@ -67,13 +67,18 @@ export async function POST(request) {
     const verificationRequests = db.collection('verification_requests');
     const auditLogs = db.collection('audit_logs');
 
-    console.log('[LIVENESS_CHECK] Looking up user with auth_user_id:', userId);
+    console.log('[LIVENESS_CHECK] Looking up user with userId:', userId);
 
-    // The userId from the session is the auth_user_id
-    const user = await users.findOne({ auth_user_id: userId });
+    // Try to find user by auth_user_id first (from session), then by id (from registration)
+    let user = await users.findOne({ auth_user_id: userId });
+    
+    if (!user) {
+      console.log('[LIVENESS_CHECK] User not found with auth_user_id, trying by id:', userId);
+      user = await users.findOne({ id: userId });
+    }
 
     if (!user) {
-      console.error('[LIVENESS_CHECK] User not found with auth_user_id:', userId);
+      console.error('[LIVENESS_CHECK] User not found with auth_user_id or id:', userId);
       return Response.json({
         success: false,
         error: {
@@ -97,6 +102,19 @@ export async function POST(request) {
           code: 'UPLOAD_FAILED',
           message: 'Failed to upload image file',
           details: uploadResult.error
+        }
+      }, { status: 500 });
+    }
+
+    // Validate that we got a valid URL
+    if (!uploadResult.url || uploadResult.url === 'null' || uploadResult.url === 'undefined') {
+      console.error('[LIVENESS_CHECK] Upload service returned invalid URL:', uploadResult.url);
+      return Response.json({
+        success: false,
+        error: {
+          code: 'UPLOAD_FAILED',
+          message: 'File upload did not return a valid URL. Please check upload service configuration.',
+          details: 'Upload service returned: ' + uploadResult.url
         }
       }, { status: 500 });
     }

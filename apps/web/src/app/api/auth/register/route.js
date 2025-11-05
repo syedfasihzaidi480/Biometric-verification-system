@@ -180,7 +180,7 @@ export async function POST(request) {
       created_at: nowIso,
       updated_at: nowIso,
     };
-    await users.insertOne(userDoc);
+  await users.insertOne(userDoc);
     console.log('[REGISTER] User created:', userDoc.id);
 
     const authUserId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
@@ -193,7 +193,7 @@ export async function POST(request) {
       created_at: nowIso,
       updated_at: nowIso,
     };
-    await authUsers.insertOne(authUserDoc);
+  await authUsers.insertOne(authUserDoc);
 
     const hashedPassword = await hash(password);
     const authAccountDoc = {
@@ -212,7 +212,7 @@ export async function POST(request) {
       created_at: nowIso,
       updated_at: nowIso,
     };
-    await authAccounts.insertOne(authAccountDoc);
+  await authAccounts.insertOne(authAccountDoc);
 
     const voiceProfileDoc = {
       id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()),
@@ -224,7 +224,7 @@ export async function POST(request) {
       created_at: nowIso,
       updated_at: nowIso,
     };
-    await voiceProfiles.insertOne(voiceProfileDoc);
+  await voiceProfiles.insertOne(voiceProfileDoc);
 
     await users.updateOne({ id: userDoc.id }, { $set: { auth_user_id: authUserId, updated_at: nowIso } });
 
@@ -262,19 +262,50 @@ export async function POST(request) {
       { status: 201 },
     );
   } catch (error) {
-    console.error("Registration error:", error);
+    // Handle unique index violations gracefully
+    if (error && (error.code === 11000 || String(error.message || '').includes('E11000'))) {
+      const msg = String(error.message || '');
+      // Determine which unique key was violated based on index names
+      if (msg.includes('uniq_phone') || msg.includes('index: phone_1') || msg.includes('phone dup key')) {
+        return Response.json({
+          success: false,
+          error: {
+            code: 'USER_EXISTS',
+            message: 'A user with this phone number already exists',
+            details: { phone: 'Phone number already registered' }
+          }
+        }, { status: 409 });
+      }
+      if (msg.includes('uniq_pension') || msg.includes('index: pension_number_1') || msg.includes('pension_number dup key')) {
+        return Response.json({
+          success: false,
+          error: {
+            code: 'USER_EXISTS',
+            message: 'A user with this pension number already exists',
+            details: { pension_number: 'Pension number already registered' }
+          }
+        }, { status: 409 });
+      }
+      if (msg.includes('uniq_email_non_null') || msg.includes('index: email_1') || msg.includes('email dup key')) {
+        return Response.json({
+          success: false,
+          error: {
+            code: 'EMAIL_EXISTS',
+            message: 'A user with this email already exists',
+            details: { email: 'Email already registered' }
+          }
+        }, { status: 409 });
+      }
+    }
 
-    return Response.json(
-      {
-        success: false,
-        error: {
-          code: "INTERNAL_ERROR",
-          message: "An internal error occurred during registration",
-          details:
-            process.env.NODE_ENV === "development" ? error.message : null,
-        },
+    console.error("Registration error:", error);
+    return Response.json({
+      success: false,
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "An internal error occurred during registration",
+        details: process.env.NODE_ENV === "development" ? error.message : null,
       },
-      { status: 500 },
-    );
+    }, { status: 500 });
   }
 }

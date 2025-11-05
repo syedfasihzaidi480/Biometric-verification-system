@@ -16,21 +16,21 @@ You created an account BEFORE the fix was applied. This means:
 3. **Delete from `users` collection**:
    ```javascript
    // Find your user
-   { "email": "syed.hassan.shah4554@gmail.com" }
+   { "email": "<user email>" }
    
    // Delete it
-   db.users.deleteOne({ "email": "syed.hassan.shah4554@gmail.com" })
+   db.users.deleteOne({ "email": "<user email>" })
    ```
 
 4. **Delete from `auth_users` collection** (if exists):
    ```javascript
-   db.auth_users.deleteOne({ "email": "syed.hassan.shah4554@gmail.com" })
+   db.auth_users.deleteOne({ "email": "<user email>" })
    ```
 
 5. **Delete from `auth_accounts` collection** (if exists):
    ```javascript
    // Find related accounts first
-   db.auth_users.findOne({ "email": "syed.hassan.shah4554@gmail.com" })
+   db.auth_users.findOne({ "email": "<user email>" })
    // Copy the "id" value
    
    db.auth_accounts.deleteMany({ "userId": "paste-id-here" })
@@ -58,10 +58,10 @@ If you want to keep the existing user, you need to manually create auth records.
 ### Check if user exists:
 ```javascript
 // In users collection
-db.users.find({ "email": "syed.hassan.shah4554@gmail.com" })
+db.users.find({ "email": "<user email>" })
 
 // In auth_users collection
-db.auth_users.find({ "email": "syed.hassan.shah4554@gmail.com" })
+db.auth_users.find({ "email": "<user email>" })
 
 // In auth_accounts collection
 db.auth_accounts.find({})
@@ -95,11 +95,11 @@ db.audit_logs.deleteMany({ "action": "USER_REGISTERED" })
    ```
 
 2. **Create a new account** (mobile or web):
-   - Full Name: Hassan
+   - Full Name: Example User
    - Date of Birth: 08/02/2005
    - Pension Number: 626816
    - Phone: +923708270136
-   - **Email**: syed.hassan.shah4554@gmail.com
+   - **Email**: example@example.com
    - **Password**: Test123!
 
 3. **Verify in MongoDB** that ALL THREE collections have data:
@@ -128,7 +128,7 @@ db.audit_logs.deleteMany({ "action": "USER_REGISTERED" })
 
 ### During Sign In:
 ```
-[SIGN-IN] Authorize called with email: syed.hassan.shah4554@gmail.com
+[SIGN-IN] Authorize called with email: example@example.com
 [SIGN-IN] Looking up user by email...
 [SIGN-IN] User found: def-456
 [SIGN-IN] Verifying password...

@@ -42,6 +42,9 @@ export async function GET(request, { params }) {
       .sort({ created_at: -1 })
       .toArray();
 
+    // Get facial/liveness data from verification requests
+    const facialVerification = verificationReqs.find(req => req.liveness_image_url);
+
     // Build detailed user object
     const userDetails = {
       id: user.id,
@@ -53,24 +56,40 @@ export async function GET(request, { params }) {
       address: user.address,
       city: user.city,
       country: user.country,
+      preferred_language: user.preferred_language,
+      pension_number: user.pension_number,
       admin_approved: user.admin_approved || false,
-      voice_verified: voiceProfile?.is_verified || false,
-      document_verified: userDocuments.some((doc) => doc.is_verified),
+      voice_verified: user.voice_verified || false,
+      face_verified: user.face_verified || false,
+      document_verified: user.document_verified || false,
+      profile_completed: user.profile_completed || false,
       created_at: user.created_at,
       updated_at: user.updated_at,
       voice_profile: voiceProfile
         ? {
             id: voiceProfile.id,
             is_verified: voiceProfile.is_verified,
+            is_enrolled: voiceProfile.is_enrolled,
             confidence_score: voiceProfile.confidence_score,
-            audio_url: voiceProfile.audio_url,
+            last_match_score: voiceProfile.last_match_score,
+            enrollment_samples_count: voiceProfile.enrollment_samples_count,
+            audio_url: voiceProfile.audio_url || voiceProfile.voice_sample_url,
+            voice_model_ref: voiceProfile.voice_model_ref,
             created_at: voiceProfile.created_at,
+            updated_at: voiceProfile.updated_at,
+          }
+        : null,
+      facial_verification: facialVerification
+        ? {
+            liveness_image_url: facialVerification.liveness_image_url,
+            status: facialVerification.status,
+            created_at: facialVerification.created_at,
           }
         : null,
       documents: userDocuments.map((doc) => ({
         id: doc.id,
         document_type: doc.document_type,
-        document_url: doc.document_url,
+        document_url: doc.document_image_url || doc.document_url,
         is_verified: doc.is_verified,
         verification_notes: doc.verification_notes,
         created_at: doc.created_at,
@@ -78,6 +97,9 @@ export async function GET(request, { params }) {
       verification_requests: verificationReqs.map((req) => ({
         id: req.id,
         status: req.status,
+        voice_match_score: req.voice_match_score,
+        liveness_image_url: req.liveness_image_url,
+        document_url: req.document_url,
         admin_id: req.admin_id,
         admin_notes: req.admin_notes,
         created_at: req.created_at,

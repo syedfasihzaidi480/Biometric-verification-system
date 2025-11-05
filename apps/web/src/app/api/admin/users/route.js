@@ -89,6 +89,9 @@ export async function GET(request) {
           voice_verified: {
             $sum: { $cond: [{ $eq: ['$voice_verified', true] }, 1, 0] }
           },
+          face_verified: {
+            $sum: { $cond: [{ $eq: ['$face_verified', true] }, 1, 0] }
+          },
           document_verified: {
             $sum: { $cond: [{ $eq: ['$document_verified', true] }, 1, 0] }
           }
@@ -101,6 +104,7 @@ export async function GET(request) {
       verified: 0,
       profile_completed: 0,
       voice_verified: 0,
+      face_verified: 0,
       document_verified: 0
     };
 
@@ -141,6 +145,7 @@ export async function GET(request) {
           unverified: summary.total - summary.verified,
           profile_completed: summary.profile_completed,
           voice_verified: summary.voice_verified,
+          face_verified: summary.face_verified,
           document_verified: summary.document_verified,
         }
       }

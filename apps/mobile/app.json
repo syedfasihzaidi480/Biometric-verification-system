@@ -9,7 +9,8 @@
 		"ios": {
 			"supportsTablet": true,
 			"infoPlist": {
-				"ITSAppUsesNonExemptEncryption": false
+				"ITSAppUsesNonExemptEncryption": false,
+				"NSCameraUsageDescription": "This app requires camera access to perform liveness (selfie) verification"
 			}
 		},
 		"android": {
@@ -18,6 +19,7 @@
 				"backgroundColor": "#ffffff"
 			},
 			"permissions": [
+				"android.permission.CAMERA",
 				"android.permission.RECORD_AUDIO",
 				"android.permission.MODIFY_AUDIO_SETTINGS"
 			],
@@ -40,6 +42,7 @@
 				}
 			],
 			"expo-av",
+			"expo-camera",
 			[
 				"expo-build-properties",
 				{

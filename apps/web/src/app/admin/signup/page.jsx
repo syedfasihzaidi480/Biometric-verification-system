@@ -116,7 +116,7 @@ export default function AdminSignUpPage() {
                   onChange={handleChange}
                   required
                   className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="John Doe"
+                  placeholder="Enter your full name"
                 />
               </div>
             </div>
@@ -134,14 +134,14 @@ export default function AdminSignUpPage() {
                   <Mail size={18} className="text-gray-400" />
                 </div>
                 <input
+                  type="email"
                   id="email"
                   name="email"
-                  type="email"
                   value={formData.email}
                   onChange={handleChange}
                   required
                   className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  placeholder="admin@example.com"
+                  placeholder="admin@company.com"
                 />
               </div>
             </div>

@@ -243,45 +243,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const mockRequests = [
-    {
-      id: 1,
-      user_name: "John Doe",
-      user_phone: "+1-555-0123",
-      user_email: "john@example.com",
-      status: "pending",
-      voice_match_score: 0.87,
-      liveness_image_url: "/api/placeholder-image.jpg",
-      document_url: "/api/placeholder-document.jpg",
-      created_at: "2025-01-15T10:30:00Z",
-      notes: null,
-    },
-    {
-      id: 2,
-      user_name: "Jane Smith",
-      user_phone: "+1-555-0124",
-      user_email: "jane@example.com",
-      status: "pending",
-      voice_match_score: 0.94,
-      liveness_image_url: "/api/placeholder-image.jpg",
-      document_url: "/api/placeholder-document.jpg",
-      created_at: "2025-01-15T09:15:00Z",
-      notes: null,
-    },
-    {
-      id: 3,
-      user_name: "Mike Johnson",
-      user_phone: "+1-555-0125",
-      user_email: "mike@example.com",
-      status: "approved",
-      voice_match_score: 0.91,
-      liveness_image_url: "/api/placeholder-image.jpg",
-      document_url: "/api/placeholder-document.jpg",
-      created_at: "2025-01-14T16:45:00Z",
-      notes: "All verification checks passed",
-    },
-  ];
-
   if (isCheckingAuth) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -647,6 +608,14 @@ export default function AdminDashboard() {
                                   : 'N/A'}
                               </span>
                             </div>
+                            {verificationDetails.voice.confidence_score && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Confidence Score:</span>
+                                <span className="font-bold text-purple-600">
+                                  {(verificationDetails.voice.confidence_score * 100).toFixed(1)}%
+                                </span>
+                              </div>
+                            )}
                             <div className="flex justify-between">
                               <span className="text-gray-600">Enrollment Status:</span>
                               <span className="font-medium">
@@ -668,6 +637,39 @@ export default function AdminDashboard() {
                               </div>
                             )}
                           </div>
+                          
+                          {/* Audio Player */}
+                          {verificationDetails.voice.audio_url && (
+                            <div className="mt-4">
+                              <label className="text-sm font-semibold text-purple-700 mb-2 block">
+                                🎵 Voice Sample Recording:
+                              </label>
+                              <audio 
+                                controls 
+                                className="w-full"
+                                style={{ 
+                                  height: '40px',
+                                  borderRadius: '8px',
+                                  backgroundColor: '#fff'
+                                }}
+                              >
+                                <source src={verificationDetails.voice.audio_url} type="audio/mpeg" />
+                                <source src={verificationDetails.voice.audio_url} type="audio/wav" />
+                                <source src={verificationDetails.voice.audio_url} type="audio/mp4" />
+                                <source src={verificationDetails.voice.audio_url} type="audio/m4a" />
+                                Your browser does not support the audio element.
+                              </audio>
+                            </div>
+                          )}
+                          
+                          {verificationDetails.voice.model_ref && (
+                            <div className="mt-3 p-2 bg-white rounded border border-purple-100">
+                              <span className="text-xs text-gray-500">Model Reference:</span>
+                              <p className="text-xs font-mono text-gray-700 break-all">
+                                {verificationDetails.voice.model_ref}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -676,26 +678,117 @@ export default function AdminDashboard() {
                         <div className="mb-6 bg-green-50 rounded-lg p-4">
                           <h3 className="text-lg font-semibold mb-3 flex items-center">
                             <Eye size={20} className="mr-2 text-green-600" />
-                            Liveness Check
+                            Facial Verification (Liveness Check)
                           </h3>
                           {verificationDetails.liveness.image_url ? (
                             <div className="mt-2">
-                              <img 
-                                src={verificationDetails.liveness.image_url}
-                                alt="Liveness check"
-                                className="w-full rounded-lg border border-green-200"
-                              />
+                              <label className="text-sm font-semibold text-green-700 mb-2 block">
+                                📸 Captured Facial Image:
+                              </label>
+                              <div className="relative group">
+                                <img 
+                                  src={verificationDetails.liveness.image_url}
+                                  alt="Liveness check"
+                                  className="w-full rounded-lg border-2 border-green-200 cursor-pointer hover:border-green-400 transition-all"
+                                  onClick={() => window.open(verificationDetails.liveness.image_url, '_blank')}
+                                  style={{ maxHeight: '400px', objectFit: 'contain' }}
+                                />
+                                <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                  Click to view full size
+                                </div>
+                              </div>
                             </div>
                           ) : (
                             <div className="text-center py-8 bg-white rounded border border-green-200">
+                              <Eye size={32} className="mx-auto mb-2 text-gray-400" />
                               <span className="text-gray-500">No liveness image available</span>
                             </div>
                           )}
                         </div>
                       )}
 
-                      {/* Document Verification */}
-                      {verificationDetails.document && (
+                      {/* All Documents */}
+                      {verificationDetails.documents && verificationDetails.documents.length > 0 && (
+                        <div className="mb-6 bg-indigo-50 rounded-lg p-4">
+                          <h3 className="text-lg font-semibold mb-3 flex items-center">
+                            <FileText size={20} className="mr-2 text-indigo-600" />
+                            All Documents ({verificationDetails.documents.length})
+                          </h3>
+                          
+                          <div className="space-y-4">
+                            {verificationDetails.documents.map((doc, index) => (
+                              <div key={doc.id} className="bg-white rounded-lg p-4 border-2 border-indigo-200">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div>
+                                    <span className="font-semibold text-indigo-900 capitalize">
+                                      {index + 1}. {doc.type?.replace('_', ' ') || 'Document'}
+                                    </span>
+                                    {doc.is_verified && (
+                                      <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                        ✓ Verified
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(doc.created_at).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                
+                                {doc.tamper_flag && (
+                                  <div className="mb-2 p-2 bg-red-100 text-red-800 rounded text-sm">
+                                    ⚠️ Tamper detected on this document
+                                  </div>
+                                )}
+                                
+                                {doc.url ? (
+                                  <div className="mt-3 relative group">
+                                    <img 
+                                      src={doc.url}
+                                      alt={`Document ${index + 1}`}
+                                      className="w-full rounded-lg border border-indigo-200 cursor-pointer hover:border-indigo-400 transition-all"
+                                      onClick={() => window.open(doc.url, '_blank')}
+                                      style={{ maxHeight: '400px', objectFit: 'contain' }}
+                                    />
+                                    <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                      Click to view full size
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="text-center py-4 bg-gray-50 rounded border border-indigo-100">
+                                    <FileText size={24} className="mx-auto mb-1 text-gray-400" />
+                                    <span className="text-sm text-gray-500">No image available</span>
+                                  </div>
+                                )}
+                                
+                                {doc.extracted_text && (
+                                  <div className="mt-3 p-3 bg-gray-50 rounded border border-indigo-100">
+                                    <span className="text-xs font-semibold text-gray-600 block mb-1">
+                                      📄 Extracted Text:
+                                    </span>
+                                    <p className="text-sm text-gray-800 whitespace-pre-wrap">
+                                      {doc.extracted_text}
+                                    </p>
+                                  </div>
+                                )}
+                                
+                                {doc.verification_notes && (
+                                  <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-100">
+                                    <span className="text-xs font-semibold text-blue-700 block mb-1">
+                                      Admin Notes:
+                                    </span>
+                                    <p className="text-sm text-blue-900">
+                                      {doc.verification_notes}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Primary Document (for backward compatibility) */}
+                      {verificationDetails.document && !verificationDetails.documents && (
                         <div className="mb-6 bg-indigo-50 rounded-lg p-4">
                           <h3 className="text-lg font-semibold mb-3 flex items-center">
                             <FileText size={20} className="mr-2 text-indigo-600" />
@@ -715,12 +808,17 @@ export default function AdminDashboard() {
                             )}
                           </div>
                           {verificationDetails.document.url ? (
-                            <div className="mt-2">
+                            <div className="mt-2 relative group">
                               <img 
                                 src={verificationDetails.document.url}
                                 alt="Document"
-                                className="w-full rounded-lg border border-indigo-200"
+                                className="w-full rounded-lg border border-indigo-200 cursor-pointer hover:border-indigo-400 transition-all"
+                                onClick={() => window.open(verificationDetails.document.url, '_blank')}
+                                style={{ maxHeight: '400px', objectFit: 'contain' }}
                               />
+                              <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                Click to view full size
+                              </div>
                             </div>
                           ) : (
                             <div className="text-center py-8 bg-white rounded border border-indigo-200">

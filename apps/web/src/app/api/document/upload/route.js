@@ -175,6 +175,19 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
+    // Validate that we got a valid URL
+    if (!uploadResult.url || uploadResult.url === 'null' || uploadResult.url === 'undefined') {
+      console.error('[DOCUMENT_UPLOAD] Upload service returned invalid URL:', uploadResult.url);
+      return Response.json({
+        success: false,
+        error: {
+          code: 'UPLOAD_FAILED',
+          message: 'File upload did not return a valid URL. Please check upload service configuration.',
+          details: 'Upload service returned: ' + uploadResult.url
+        }
+      }, { status: 500 });
+    }
+
     // Call ML service for document verification
     const mlResponse = await callMLDocumentService(uploadResult.url, documentType, user.id);
     
@@ -324,13 +337,13 @@ async function callMLDocumentService(documentUrl, documentType, userId) {
 function createPlaceholderDocumentResponse(userId, documentType) {
   const seed = parseInt(userId) || 1;
   
-  // Generate realistic extracted text based on document type
+  // Generate placeholder extracted text based on document type
   const documentTexts = {
-    'id_card': `ID: ${1000000 + seed}\\nName: John Doe\\nDOB: 1990-01-01\\nExpiry: 2030-12-31`,
-    'passport': `Passport: P${seed}\\nName: John Doe\\nNationality: Country\\nDOB: 1990-01-01\\nExpiry: 2030-12-31`,
-    'drivers_license': `License: DL${seed}\\nName: John Doe\\nDOB: 1990-01-01\\nClass: C\\nExpiry: 2030-12-31`,
-    'national_id': `National ID: N${seed}\\nName: John Doe\\nDOB: 1990-01-01\\nIssued: 2020-01-01`,
-    'other': `Document ID: ${seed}\\nName: John Doe`
+    'id_card': `ID: ${1000000 + seed}\\n[Extracted Text Placeholder]\\nDocument Type: ID Card`,
+    'passport': `Passport: P${seed}\\n[Extracted Text Placeholder]\\nDocument Type: Passport`,
+    'drivers_license': `License: DL${seed}\\n[Extracted Text Placeholder]\\nDocument Type: Driver's License`,
+    'national_id': `National ID: N${seed}\\n[Extracted Text Placeholder]\\nDocument Type: National ID`,
+    'other': `Document ID: ${seed}\\n[Extracted Text Placeholder]`
   };
 
   // Deterministic tamper detection (5% chance based on user ID)

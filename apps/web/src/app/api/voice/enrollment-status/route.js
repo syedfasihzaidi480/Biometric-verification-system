@@ -25,13 +25,18 @@ export async function GET(request) {
     const users = db.collection('users');
     const voiceProfiles = db.collection('voice_profiles');
 
-    console.log('[ENROLLMENT_STATUS] Checking enrollment for auth_user_id:', userId);
+    console.log('[ENROLLMENT_STATUS] Checking enrollment for userId:', userId);
 
-    // The userId from the session is the auth_user_id
-    const user = await users.findOne({ auth_user_id: userId });
+    // Try to find user by auth_user_id first (from session), then by id (from registration)
+    let user = await users.findOne({ auth_user_id: userId });
+    
+    if (!user) {
+      console.log('[ENROLLMENT_STATUS] User not found with auth_user_id, trying by id:', userId);
+      user = await users.findOne({ id: userId });
+    }
 
     if (!user) {
-      console.error('[ENROLLMENT_STATUS] User not found with auth_user_id:', userId);
+      console.error('[ENROLLMENT_STATUS] User not found with auth_user_id or id:', userId);
       return Response.json({
         success: false,
         error: {

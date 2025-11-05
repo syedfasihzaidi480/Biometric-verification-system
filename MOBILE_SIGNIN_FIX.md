@@ -1,18 +1,18 @@
 # Mobile Sign-In Issue - RESOLVED ✅
 
 ## Problem
-The mobile app was trying to sign in with email `fasihzaidi480@gmail.com`, but this user didn't exist in the database, causing a `CredentialsSignin` error.
+The mobile app was trying to sign in with a specific test email, but this user didn't exist in the database, causing a `CredentialsSignin` error.
 
 ## Root Cause
 The error occurred because:
-1. The user with email `fasihzaidi480@gmail.com` was not registered in the database
+1. The user with the test email was not registered in the database
 2. Auth.js requires users to exist in the `auth_users` collection with a corresponding `auth_accounts` entry containing credentials
 
 ## Solution Applied
 Created the test user in the database with proper authentication credentials:
 
 ### User Details
-- **Email**: `fasihzaidi480@gmail.com`
+- **Email**: `<test email>`
 - **Password**: `Test123!`
 - **Name**: Fasih Zaidi
 - **Phone**: +923001234567
@@ -31,7 +31,7 @@ Created the test user in the database with proper authentication credentials:
 1. Open the mobile app
 2. Navigate to the Sign In screen
 3. Enter credentials:
-   - **Email**: `fasihzaidi480@gmail.com`
+   - **Email**: `<test email>`
    - **Password**: `Test123!`
 4. Click "Sign In"
 5. ✅ **Expected Result**: Should successfully authenticate and redirect to dashboard
@@ -125,7 +125,7 @@ To avoid this issue in the future:
 
 ## Status: ✅ RESOLVED
 
-The user `fasihzaidi480@gmail.com` is now properly registered in the database and can successfully sign in to the mobile app.
+The test user is now properly registered in the database and can successfully sign in to the mobile app.
 
 ---
 **Date**: November 2, 2025

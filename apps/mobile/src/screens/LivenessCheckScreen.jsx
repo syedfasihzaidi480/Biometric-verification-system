@@ -32,6 +32,7 @@ export default function LivenessCheckScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showConsent, setShowConsent] = useState(true);
   const [lastSelfieUri, setLastSelfieUri] = useState(null);
+  const [isCameraReady, setIsCameraReady] = useState(false);
 
   const instructions = [
     { key: 'ready', duration: 3000 },
@@ -59,7 +60,22 @@ export default function LivenessCheckScreen() {
     setShowConsent(false);
   };
 
+  const waitForCameraReady = async (timeoutMs = 5000) => {
+    const start = Date.now();
+    while (!isCameraReady) {
+      if (Date.now() - start > timeoutMs) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return isCameraReady;
+  };
+
   const startLivenessCheck = async () => {
+    // Ensure camera is ready before starting
+    const ready = await waitForCameraReady();
+    if (!ready) {
+      Alert.alert(t('common.error'), t('permissions.camera.message'));
+      return;
+    }
     setIsCapturing(true);
     setInstructionStep(0);
     setCurrentInstruction(instructions[0].key);
@@ -72,7 +88,7 @@ export default function LivenessCheckScreen() {
       await new Promise(resolve => setTimeout(resolve, instructions[i].duration));
       
       // Capture photo at key moments
-      if (instructions[i].key === 'lookStraight') {
+      if (instructions[i].key === 'blink' || instructions[i].key === 'lookStraight') {
         const photo = await capturePhoto();
         if (photo?.uri) setLastSelfieUri(photo.uri);
       }
@@ -83,7 +99,7 @@ export default function LivenessCheckScreen() {
   };
 
   const capturePhoto = async () => {
-    if (!cameraRef.current) return;
+    if (!cameraRef.current || !isCameraReady) return null;
 
     try {
       const photo = await cameraRef.current.takePictureAsync({
@@ -108,7 +124,8 @@ export default function LivenessCheckScreen() {
       }
 
       if (!lastSelfieUri) {
-        // Fallback: capture one more photo
+        // Fallback: capture one more photo after ensuring camera is ready
+        await waitForCameraReady(2000);
         const fallback = await capturePhoto();
         if (fallback?.uri) setLastSelfieUri(fallback.uri);
       }
@@ -172,7 +189,16 @@ export default function LivenessCheckScreen() {
       }
     } catch (error) {
       console.error('Liveness processing error:', error);
-      Alert.alert(t('common.error'), t('errors.network'));
+      const message = String(error?.message || '');
+      if (message.includes('No selfie captured')) {
+        Alert.alert(
+          t('liveness.livenessFailed'),
+          'We could not capture your selfie. Please ensure camera permission is granted, your face is within the frame, and try again.',
+          [{ text: t('common.retry') }]
+        );
+      } else {
+        Alert.alert(t('common.error'), t('errors.network'));
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -269,6 +295,7 @@ export default function LivenessCheckScreen() {
         style={styles.camera}
         facing="front"
         ref={cameraRef}
+        onCameraReady={() => setIsCameraReady(true)}
       >
         {/* Face outline overlay */}
         <View style={styles.overlay}>
@@ -301,13 +328,19 @@ export default function LivenessCheckScreen() {
 
       {/* Controls */}
       <View style={styles.controls}>
-        {!isCapturing && !isProcessing && (
+        {!isCapturing && !isProcessing && isCameraReady && (
           <TouchableOpacity
             style={styles.captureButton}
             onPress={startLivenessCheck}
           >
             <Text style={styles.captureButtonText}>{t('liveness.takeSelfie')}</Text>
           </TouchableOpacity>
+        )}
+        {!isCapturing && !isProcessing && !isCameraReady && (
+          <View style={styles.processingContainer}>
+            <RotateCw size={24} color="#007AFF" />
+            <Text style={styles.processingText}>Preparing camera…</Text>
+          </View>
         )}
 
         {isProcessing && (

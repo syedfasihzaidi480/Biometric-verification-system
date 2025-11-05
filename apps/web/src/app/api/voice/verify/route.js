@@ -45,13 +45,18 @@ export async function POST(request) {
     const voiceProfiles = db.collection('voice_profiles');
     const auditLogs = db.collection('audit_logs');
 
-    console.log('[VOICE_VERIFY] Looking up user with auth_user_id:', userId);
+    console.log('[VOICE_VERIFY] Looking up user with userId:', userId);
 
-    // The userId from the session is the auth_user_id, so look up by that field
-    const user = await users.findOne({ auth_user_id: userId });
+    // Try to find user by auth_user_id first (from session), then by id (from registration)
+    let user = await users.findOne({ auth_user_id: userId });
+    
+    if (!user) {
+      console.log('[VOICE_VERIFY] User not found with auth_user_id, trying by id:', userId);
+      user = await users.findOne({ id: userId });
+    }
 
     if (!user) {
-      console.error('[VOICE_VERIFY] User not found with auth_user_id:', userId);
+      console.error('[VOICE_VERIFY] User not found with auth_user_id or id:', userId);
       return Response.json({
         success: false,
         error: {

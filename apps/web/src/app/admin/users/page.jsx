@@ -17,6 +17,11 @@ import {
   Phone,
   Mail,
   Calendar,
+  Camera,
+  MapPin,
+  Globe,
+  CreditCard,
+  Clock,
 } from "lucide-react";
 
 export default function AdminUsersPage() {
@@ -244,7 +249,7 @@ export default function AdminUsersPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Summary Stats */}
         {summary && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -268,7 +273,7 @@ export default function AdminUsersPage() {
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Voice Verified</p>
+                  <p className="text-sm text-gray-600">Voice</p>
                   <p className="text-2xl font-bold text-purple-600">{summary.voice_verified}</p>
                 </div>
                 <Volume2 size={32} className="text-purple-500" />
@@ -278,7 +283,17 @@ export default function AdminUsersPage() {
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Document Verified</p>
+                  <p className="text-sm text-gray-600">Face</p>
+                  <p className="text-2xl font-bold text-blue-600">{summary.face_verified || 0}</p>
+                </div>
+                <Camera size={32} className="text-blue-500" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Document</p>
                   <p className="text-2xl font-bold text-indigo-600">{summary.document_verified}</p>
                 </div>
                 <FileText size={32} className="text-indigo-500" />
@@ -424,13 +439,19 @@ export default function AdminUsersPage() {
                                 Voice
                               </span>
                             )}
+                            {user.face_verified && (
+                              <span className="inline-flex items-center text-xs">
+                                <Camera size={12} className="mr-1 text-blue-600" />
+                                Face
+                              </span>
+                            )}
                             {user.document_verified && (
                               <span className="inline-flex items-center text-xs">
                                 <FileText size={12} className="mr-1 text-indigo-600" />
                                 Document
                               </span>
                             )}
-                            {!user.voice_verified && !user.document_verified && (
+                            {!user.voice_verified && !user.face_verified && !user.document_verified && (
                               <span className="text-xs text-gray-400">None</span>
                             )}
                           </div>
@@ -515,7 +536,7 @@ export default function AdminUsersPage() {
                 <div className="mb-6 bg-gray-50 rounded-lg p-4">
                   <h3 className="text-lg font-semibold mb-3 flex items-center">
                     <User size={20} className="mr-2" />
-                    Contact Information
+                    User Information
                   </h3>
                   <div className="space-y-2">
                     {userDetails.phone && (
@@ -536,6 +557,32 @@ export default function AdminUsersPage() {
                         <span>DOB: {new Date(userDetails.date_of_birth).toLocaleDateString()}</span>
                       </div>
                     )}
+                    {userDetails.pension_number && (
+                      <div className="flex items-center text-gray-700">
+                        <CreditCard size={16} className="mr-3 text-gray-400" />
+                        <span>Pension #: {userDetails.pension_number}</span>
+                      </div>
+                    )}
+                    {userDetails.address && (
+                      <div className="flex items-center text-gray-700">
+                        <MapPin size={16} className="mr-3 text-gray-400" />
+                        <span>{userDetails.address}</span>
+                      </div>
+                    )}
+                    {(userDetails.city || userDetails.country) && (
+                      <div className="flex items-center text-gray-700">
+                        <Globe size={16} className="mr-3 text-gray-400" />
+                        <span>
+                          {[userDetails.city, userDetails.country].filter(Boolean).join(', ')}
+                        </span>
+                      </div>
+                    )}
+                    {userDetails.preferred_language && (
+                      <div className="flex items-center text-gray-700">
+                        <Globe size={16} className="mr-3 text-gray-400" />
+                        <span>Language: {userDetails.preferred_language.toUpperCase()}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -549,10 +596,32 @@ export default function AdminUsersPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Status:</span>
-                        <span className="font-medium text-purple-600">
-                          {userDetails.voice_profile.is_verified ? 'Verified' : 'Pending'}
+                        <span className={`font-medium ${userDetails.voice_profile.is_verified ? 'text-green-600' : 'text-yellow-600'}`}>
+                          {userDetails.voice_profile.is_verified ? '✓ Verified' : '○ Not Verified'}
                         </span>
                       </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Enrolled:</span>
+                        <span className="font-medium">
+                          {userDetails.voice_profile.is_enrolled ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                      {userDetails.voice_profile.enrollment_samples_count > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Samples:</span>
+                          <span className="font-medium">
+                            {userDetails.voice_profile.enrollment_samples_count}
+                          </span>
+                        </div>
+                      )}
+                      {userDetails.voice_profile.last_match_score && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Last Match Score:</span>
+                          <span className="font-medium">
+                            {(userDetails.voice_profile.last_match_score * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      )}
                       {userDetails.voice_profile.confidence_score && (
                         <div className="flex justify-between">
                           <span className="text-gray-600">Confidence Score:</span>
@@ -561,11 +630,60 @@ export default function AdminUsersPage() {
                           </span>
                         </div>
                       )}
+                      {userDetails.voice_profile.voice_model_ref && (
+                        <div className="mt-2 p-2 bg-white rounded border border-purple-100">
+                          <span className="text-xs text-gray-500">Model Ref:</span>
+                          <p className="text-xs font-mono text-gray-700 break-all">
+                            {userDetails.voice_profile.voice_model_ref}
+                          </p>
+                        </div>
+                      )}
                       {userDetails.voice_profile.audio_url && (
-                        <div className="mt-2">
+                        <div className="mt-3">
+                          <label className="text-sm text-gray-600 mb-1 block">Voice Sample:</label>
                           <audio controls className="w-full">
                             <source src={userDetails.voice_profile.audio_url} type="audio/mpeg" />
                           </audio>
+                        </div>
+                      )}
+                      {userDetails.voice_profile.created_at && (
+                        <div className="flex justify-between text-xs text-gray-500 mt-2">
+                          <span>Enrolled:</span>
+                          <span>{new Date(userDetails.voice_profile.created_at).toLocaleString()}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Facial/Liveness Verification */}
+                {userDetails.facial_verification && (
+                  <div className="mb-6 bg-blue-50 rounded-lg p-4">
+                    <h3 className="text-lg font-semibold mb-3 flex items-center">
+                      <Camera size={20} className="mr-2 text-blue-600" />
+                      Facial Verification (Liveness Check)
+                    </h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Status:</span>
+                        <span className={`font-medium ${userDetails.face_verified ? 'text-green-600' : 'text-yellow-600'}`}>
+                          {userDetails.face_verified ? '✓ Verified' : '○ Not Verified'}
+                        </span>
+                      </div>
+                      {userDetails.facial_verification.liveness_image_url && (
+                        <div className="mt-3">
+                          <label className="text-sm text-gray-600 mb-1 block">Liveness Image:</label>
+                          <img 
+                            src={userDetails.facial_verification.liveness_image_url} 
+                            alt="Liveness Check"
+                            className="w-full rounded border border-blue-200 max-h-64 object-cover"
+                          />
+                        </div>
+                      )}
+                      {userDetails.facial_verification.created_at && (
+                        <div className="flex justify-between text-xs text-gray-500 mt-2">
+                          <span>Captured:</span>
+                          <span>{new Date(userDetails.facial_verification.created_at).toLocaleString()}</span>
                         </div>
                       )}
                     </div>
@@ -622,18 +740,62 @@ export default function AdminUsersPage() {
                       <Shield size={20} className="mr-2 text-yellow-600" />
                       Verification Requests
                     </h3>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {userDetails.verification_requests.map((req) => (
                         <div key={req.id} className="bg-white rounded-lg p-3 border border-yellow-100">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium capitalize">{req.status}</span>
+                          <div className="flex justify-between items-start mb-2">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              req.status === 'approved' 
+                                ? 'bg-green-100 text-green-800' 
+                                : req.status === 'rejected'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {req.status === 'approved' && <CheckCircle size={12} className="mr-1" />}
+                              {req.status === 'rejected' && <XCircle size={12} className="mr-1" />}
+                              {req.status === 'pending' && <Clock size={12} className="mr-1" />}
+                              {req.status}
+                            </span>
                             <span className="text-xs text-gray-500">
-                              {new Date(req.created_at).toLocaleDateString()}
+                              {new Date(req.created_at).toLocaleString()}
                             </span>
                           </div>
+                          
+                          {/* Verification Details */}
+                          <div className="space-y-1 text-sm">
+                            {req.voice_match_score && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-600 flex items-center">
+                                  <Volume2 size={12} className="mr-1" />
+                                  Voice Match:
+                                </span>
+                                <span className="font-medium">{(req.voice_match_score * 100).toFixed(1)}%</span>
+                              </div>
+                            )}
+                            {req.liveness_image_url && (
+                              <div className="flex items-center text-gray-600">
+                                <Camera size={12} className="mr-1" />
+                                <span>Facial verification completed</span>
+                              </div>
+                            )}
+                            {req.document_url && (
+                              <div className="flex items-center text-gray-600">
+                                <FileText size={12} className="mr-1" />
+                                <span>Document uploaded</span>
+                              </div>
+                            )}
+                          </div>
+
                           {req.admin_notes && (
-                            <div className="mt-2 text-sm text-gray-600">
-                              <strong>Admin Notes:</strong> {req.admin_notes}
+                            <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                              <strong className="text-gray-700">Admin Notes:</strong>
+                              <p className="text-gray-600 mt-1">{req.admin_notes}</p>
+                            </div>
+                          )}
+                          
+                          {req.updated_at && req.updated_at !== req.created_at && (
+                            <div className="mt-2 text-xs text-gray-400">
+                              Updated: {new Date(req.updated_at).toLocaleString()}
                             </div>
                           )}
                         </div>

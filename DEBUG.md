@@ -37,7 +37,7 @@ npx expo start -c
 1. Open the app (scan QR code from Expo)
 2. Tap "Sign In" → Tap "Sign up" link
 3. Fill in the form:
-   - Name: `Hassan`
+  - Name: `Example User`
    - Date of Birth: `09/12/2003`
    - Pension Number: `12345`
    - Phone: `+92304646645`
@@ -48,7 +48,7 @@ npx expo start -c
 **Watch the web terminal for logs:**
 ```
 [REGISTER] Registration request received
-[REGISTER] Request body: { name: 'Hassan', ... }
+[REGISTER] Request body: { name: 'Example User', ... }
 [REGISTER] Using MongoDB for registration
 [REGISTER] Checking for duplicate users...
 [REGISTER] Creating user document...
@@ -163,7 +163,7 @@ npx expo start -c
 ```json
 {
   "id": "uuid",
-  "name": "Hassan",
+  "name": "Example User",
   "phone": "+92304646645",
   "email": "test@example.com",
   "pension_number": "12345",

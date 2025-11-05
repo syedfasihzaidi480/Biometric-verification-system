@@ -53,11 +53,15 @@ export async function GET(request, { params }) {
     // Get voice profile
     const voiceProfile = await voiceProfiles.findOne({ user_id: verification.user_id });
 
-    // Get document
-    const document = await documents.findOne({ 
-      user_id: verification.user_id,
-      document_image_url: verification.document_url
-    });
+    // Get ALL documents for the user
+    const userDocuments = await documents.find({ 
+      user_id: verification.user_id
+    }).sort({ created_at: -1 }).toArray();
+
+    // Get the specific document if verification has one
+    const verificationDocument = verification.document_url 
+      ? userDocuments.find(doc => doc.document_image_url === verification.document_url)
+      : null;
 
     // Get audit trail for this verification
     const auditLogsData = await auditLogs.find({
@@ -96,18 +100,30 @@ export async function GET(request, { params }) {
             model_ref: voiceProfile.voice_model_ref,
             is_enrolled: voiceProfile.is_enrolled,
             enrollment_samples_count: voiceProfile.enrollment_samples_count,
-            last_match_score: voiceProfile.last_match_score
+            last_match_score: voiceProfile.last_match_score,
+            audio_url: voiceProfile.audio_url,
+            confidence_score: voiceProfile.confidence_score
           } : null,
           liveness: {
             image_url: verification.liveness_image_url
           },
-          document: document ? {
-            id: document.id,
-            type: document.document_type,
+          document: verificationDocument ? {
+            id: verificationDocument.id,
+            type: verificationDocument.document_type,
             url: verification.document_url,
-            extracted_text: document.document_text,
-            tamper_flag: document.tamper_flag
+            extracted_text: verificationDocument.document_text,
+            tamper_flag: verificationDocument.tamper_flag
           } : null,
+          documents: userDocuments.map(doc => ({
+            id: doc.id,
+            type: doc.document_type,
+            url: doc.document_image_url,
+            extracted_text: doc.document_text,
+            tamper_flag: doc.tamper_flag,
+            is_verified: doc.is_verified,
+            verification_notes: doc.verification_notes,
+            created_at: doc.created_at
+          })),
           status: verification.status,
           admin: admin ? {
             id: admin.id,
