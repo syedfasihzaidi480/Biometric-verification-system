@@ -36,14 +36,24 @@ export async function GET(request, { params }) {
       .sort({ created_at: -1 })
       .toArray();
 
-    // Get verification requests
+    // Get verification requests (latest first)
     const verificationReqs = await verificationRequests
       .find({ user_id: user.id })
-      .sort({ created_at: -1 })
+      .sort({ updated_at: -1, created_at: -1 })
       .toArray();
 
     // Get facial/liveness data from verification requests
     const facialVerification = verificationReqs.find(req => req.liveness_image_url);
+
+    const hasApprovedVerification = verificationReqs.some((req) => req.status === 'approved');
+    const computedAdminApproved = (user.admin_approved || false) || hasApprovedVerification;
+
+    // Self-heal mismatch so future reads are consistent
+    if (computedAdminApproved && user.admin_approved !== true) {
+      try {
+        await users.updateOne({ id: user.id }, { $set: { admin_approved: true, updated_at: new Date().toISOString() } });
+      } catch (_) {}
+    }
 
     // Build detailed user object
     const userDetails = {
@@ -58,7 +68,7 @@ export async function GET(request, { params }) {
       country: user.country,
       preferred_language: user.preferred_language,
       pension_number: user.pension_number,
-      admin_approved: user.admin_approved || false,
+  admin_approved: computedAdminApproved,
       voice_verified: user.voice_verified || false,
       face_verified: user.face_verified || false,
       document_verified: user.document_verified || false,

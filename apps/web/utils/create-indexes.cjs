@@ -72,6 +72,10 @@ async function main() {
 	await create('notification_devices', { token: 1 }, { unique: true, name: 'notif_token_unique' });
 	await create('notification_devices', { user_id: 1, updated_at: -1 }, { name: 'notif_user_updated' });
 
+	// Notifications inbox
+	await create('notifications', { user_id: 1, created_at: -1 }, { name: 'notif_user_created' });
+	await create('notifications', { read: 1, created_at: -1 }, { name: 'notif_read_created' });
+
 	await client.close();
 	console.log('✅ Index creation complete.');
 }

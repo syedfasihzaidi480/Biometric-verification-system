@@ -6,6 +6,7 @@
 		"dev": "react-router dev --host --port 4000",
 		"cleanup:preserve-superadmin": "node ./scripts/cleanup-preserve-super-admin.cjs",
 		"db:indexes": "node ./utils/create-indexes.cjs",
+		"db:backfill:admin-approved": "node ./scripts/backfill-admin-approved.cjs",
 		"typecheck": "react-router typegen && tsc --noEmit"
 	},
 	"dependencies": {
