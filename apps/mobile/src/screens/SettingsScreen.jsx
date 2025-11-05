@@ -25,15 +25,32 @@ import {
   Lock
 } from 'lucide-react-native';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useAuth } from '@/utils/auth/useAuth';
+import * as Notifications from 'expo-notifications';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { PREF_KEYS, loadPreferences, setPreference } from '@/utils/preferences';
+import { useTheme } from '@/utils/theme/ThemeProvider';
+import { syncNotificationPreference } from '@/utils/notifications/syncPreference';
 import { resetOnboarding } from '@/utils/onboarding';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { t, currentLanguage, changeLanguage } = useTranslation();
+  const { isAuthenticated, signIn, signOut } = useAuth();
+  const { isDark, setDark, colors } = useTheme();
 
   const [notifications, setNotifications] = useState(true);
   const [biometricLock, setBiometricLock] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+
+  React.useEffect(() => {
+    (async () => {
+      const prefs = await loadPreferences();
+      setNotifications(prefs.notifications);
+      setBiometricLock(prefs.biometricLock);
+      setDarkMode(prefs.darkMode);
+    })();
+  }, []);
 
   const languages = [
     { code: 'en', name: 'English', nativeName: 'English' },
@@ -74,12 +91,51 @@ export default function SettingsScreen() {
           text: 'Sign Out',
           style: 'destructive',
           onPress: () => {
-            // TODO: Clear user session
-            router.replace('/onboarding');
+            signOut();
+            router.replace('/');
           },
         },
       ]
     );
+  };
+
+  const handleToggleNotifications = async (value) => {
+    if (value) {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Notifications Disabled', 'Permission not granted. Enable notifications in system settings to receive alerts.');
+        return; // keep previous state
+      }
+    }
+    setNotifications(value);
+    setPreference(PREF_KEYS.notifications, value);
+    // Try to sync with backend (best-effort)
+    try { await syncNotificationPreference(value); } catch {}
+  };
+
+  const handleToggleBiometric = async (value) => {
+    if (value) {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+      if (!hasHardware || !isEnrolled) {
+        Alert.alert('Biometrics Unavailable', 'Your device does not have biometric hardware or no biometrics are enrolled.');
+        return;
+      }
+      const result = await LocalAuthentication.authenticateAsync({ promptMessage: 'Enable Biometric Lock' });
+      if (!result.success) {
+        Alert.alert('Authentication Failed', 'Could not enable Biometric Lock.');
+        return;
+      }
+    }
+    setBiometricLock(value);
+    setPreference(PREF_KEYS.biometricLock, value);
+  };
+
+  const handleToggleDarkMode = async (value) => {
+    setDarkMode(value);
+    setPreference(PREF_KEYS.darkMode, value);
+    // Update global theme immediately
+    setDark(!!value);
   };
 
   const settingSections = [
@@ -111,7 +167,7 @@ export default function SettingsScreen() {
           subtitle: 'Manage notification preferences',
           hasSwitch: true,
           switchValue: notifications,
-          onSwitchChange: setNotifications,
+          onSwitchChange: handleToggleNotifications,
         },
         {
           icon: <Shield size={20} color="#007AFF" />,
@@ -119,7 +175,7 @@ export default function SettingsScreen() {
           subtitle: 'Use face/fingerprint to unlock',
           hasSwitch: true,
           switchValue: biometricLock,
-          onSwitchChange: setBiometricLock,
+          onSwitchChange: handleToggleBiometric,
         },
         {
           icon: <Lock size={20} color="#007AFF" />,
@@ -140,7 +196,7 @@ export default function SettingsScreen() {
           subtitle: 'Toggle dark theme',
           hasSwitch: true,
           switchValue: darkMode,
-          onSwitchChange: setDarkMode,
+          onSwitchChange: handleToggleDarkMode,
         },
         {
           icon: <Info size={20} color="#FF9500" />,
@@ -202,6 +258,19 @@ export default function SettingsScreen() {
       ],
     },
   ];
+
+  if (!isAuthenticated) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}> 
+        <StatusBar style="dark" />
+        <Text style={{ fontSize: 20, fontWeight: '700', color: '#1F2937', marginBottom: 8 }}>Please Sign In</Text>
+        <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 16 }}>Sign in to access Settings</Text>
+        <TouchableOpacity onPress={signIn} style={{ backgroundColor: '#007AFF', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 }}>
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Sign In</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

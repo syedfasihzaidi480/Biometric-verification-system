@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/utils/auth/useAuth';
 import useUser from '@/utils/auth/useUser';
@@ -23,7 +24,8 @@ import {
   Calendar, 
   LogOut,
   Shield,
-  CreditCard
+  CreditCard,
+  Settings
 } from 'lucide-react-native';
 
 export default function ProfileScreen() {
@@ -129,6 +131,9 @@ export default function ProfileScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
+        <TouchableOpacity accessibilityLabel="Open Settings" onPress={() => router.push('/settings')} style={styles.headerAction}>
+          <Settings size={22} color="#1F2937" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -326,11 +331,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 20,
     backgroundColor: '#F5F5F5',
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: '700',
     color: '#1F2937',
+    flex: 1,
+  },
+  headerAction: {
+    padding: 8,
+    borderRadius: 10,
   },
   title: {
     fontSize: 24,

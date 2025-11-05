@@ -133,6 +133,9 @@ export default function SignInPage() {
                 Sign up
               </a>
             </p>
+            <p className="text-gray-600 mt-3">
+              Prefer phone-based sign in? Use our mobile app.
+            </p>
           </div>
         </form>
       </div>

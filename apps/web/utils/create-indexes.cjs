@@ -68,6 +68,10 @@ async function main() {
 	await create('voice_enrollment_sessions', { user_id: 1, created_at: -1 }, { name: 'voice_session_user' });
 	await create('audit_logs', { user_id: 1, created_at: -1 }, { name: 'audit_user_created' });
 
+	// Notification devices
+	await create('notification_devices', { token: 1 }, { unique: true, name: 'notif_token_unique' });
+	await create('notification_devices', { user_id: 1, updated_at: -1 }, { name: 'notif_user_updated' });
+
 	await client.close();
 	console.log('✅ Index creation complete.');
 }

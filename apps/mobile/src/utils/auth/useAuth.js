@@ -1,9 +1,8 @@
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { useCallback, useEffect, useMemo } from 'react';
-import { create } from 'zustand';
-import { Modal, View } from 'react-native';
+import { useCallback, useEffect } from 'react';
 import { useAuthModal, useAuthStore, authKey } from './store';
+import { Platform } from 'react-native';
 
 
 /**
@@ -28,10 +27,20 @@ export const useAuth = () => {
   useEffect(() => {}, []);
 
   const signIn = useCallback(() => {
-    open({ mode: 'signin' });
+    // On native, navigate to the first‑party Login screen that supports phone or email.
+    // On web, keep using the modal-based web auth flow.
+    if (Platform.OS === 'web') {
+      open({ mode: 'signin' });
+    } else {
+      router.push('/login');
+    }
   }, [open]);
   const signUp = useCallback(() => {
-    open({ mode: 'signup' });
+    if (Platform.OS === 'web') {
+      open({ mode: 'signup' });
+    } else {
+      router.push('/registration');
+    }
   }, [open]);
 
   const signOut = useCallback(() => {

@@ -17,8 +17,6 @@ export default function SignUpPage() {
   });
 
   const validateForm = () => {
-    const newErrors = {};
-
     // Name validation
     if (!formData.fullName.trim()) {
       return "Full name is required";
@@ -41,10 +39,14 @@ export default function SignUpPage() {
       return "Phone number is required";
     }
 
-    // Email + password for credentials auth
-    if (!formData.email.trim()) {
-      return "Email is required";
+    // Email is optional. If provided, validate format.
+    if (formData.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email.trim())) {
+        return "Please enter a valid email address";
+      }
     }
+
     if (!formData.password.trim()) {
       return "Password is required";
     }
@@ -200,14 +202,14 @@ export default function SignUpPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email *
+                Email (optional)
               </label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => updateFormData("email", e.target.value)}
                 className="w-full px-3 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your email address"
+                placeholder="Enter your email address (optional)"
               />
             </div>
 
