@@ -254,10 +254,9 @@ export default function VoiceEnrollmentScreen() {
           setCurrentSample((prev) => prev + 1);
         }
       } else {
-        Alert.alert(
+          Alert.alert(
           t("common.error"),
-          result.error?.message ||
-            "Voice recording quality is too low. Please try again in a quiet environment.",
+          result.error?.message || t('voiceEnrollment.qualityPoor'),
         );
       }
     } catch (error) {
@@ -351,7 +350,7 @@ export default function VoiceEnrollmentScreen() {
         >
           <ArrowLeft size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Voice Verification</Text>
+  <Text style={styles.headerTitle}>{t('voiceEnrollment.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -365,7 +364,7 @@ export default function VoiceEnrollmentScreen() {
             {/* Progress Indicator */}
             <View style={styles.progressContainer}>
               <Text style={styles.progressText}>
-                Sample {currentSample} of {totalSamples}
+                {t('voiceEnrollment.sample')} {currentSample} {t('voiceEnrollment.of')} {totalSamples}
               </Text>
               <View style={styles.dotsContainer}>
                 {[1, 2, 3].map((num) => (
@@ -383,9 +382,7 @@ export default function VoiceEnrollmentScreen() {
 
             {/* Instructions */}
             <View style={styles.instructionCard}>
-              <Text style={styles.instructionTitle}>
-                Please read the following phrase clearly:
-              </Text>
+              <Text style={styles.instructionTitle}>{t('voiceEnrollment.instructions')}</Text>
               <View style={styles.phraseBox}>
                 <Text style={styles.phraseText}>{getCurrentQuestion()}</Text>
               </View>
@@ -415,12 +412,12 @@ export default function VoiceEnrollmentScreen() {
               {/* Status Text */}
               <Text style={styles.statusText}>
                 {isProcessing
-                  ? "Processing..."
+                  ? t('voiceEnrollment.processing')
                   : isRecording
-                    ? "Recording..."
-                    : recordingDuration > 0
-                      ? "Recording Complete"
-                      : "Tap to Record"}
+                  ? t('voiceEnrollment.stopRecording')
+                  : recordingDuration > 0
+                  ? t('voiceEnrollment.recordingComplete')
+                  : t('voiceEnrollment.startRecording')}
               </Text>
 
               {/* Duration */}
@@ -438,7 +435,7 @@ export default function VoiceEnrollmentScreen() {
                 style={styles.cancelButton}
                 onPress={() => router.back()}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
 
               {recordingDuration > 0 && !isRecording && (
@@ -448,7 +445,7 @@ export default function VoiceEnrollmentScreen() {
                   disabled={isProcessing}
                 >
                   <Text style={styles.submitButtonText}>
-                    {isProcessing ? "Processing..." : "Submit"}
+                    {isProcessing ? t('voiceEnrollment.processing') : t('common.submit')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -461,20 +458,13 @@ export default function VoiceEnrollmentScreen() {
               <CheckCircle size={80} color="#10B981" />
             </View>
 
-            <Text style={styles.completedTitle}>
-              Voice Verification Complete!
-            </Text>
+            <Text style={styles.completedTitle}>{t('voiceEnrollment.enrollmentComplete')}</Text>
 
-            <Text style={styles.completedSubtitle}>
-              Your voice has been successfully enrolled
-            </Text>
+            <Text style={styles.completedSubtitle}>{t('voiceEnrollment.enrolledMessage')}</Text>
 
             {matchScore && (
               <View style={styles.scoreCard}>
-                <Text style={styles.scoreLabel}>Match Score</Text>
-                <Text style={styles.scoreValue}>
-                  {Math.round(matchScore * 100)}%
-                </Text>
+                <Text style={styles.scoreLabel}>{t('voiceEnrollment.matchScore', { score: Math.round(matchScore * 100) })}</Text>
               </View>
             )}
 
@@ -482,7 +472,7 @@ export default function VoiceEnrollmentScreen() {
               style={styles.continueButton}
               onPress={handleContinue}
             >
-              <Text style={styles.continueButtonText}>Continue</Text>
+              <Text style={styles.continueButtonText}>{t('common.continue')}</Text>
             </TouchableOpacity>
           </View>
         )}

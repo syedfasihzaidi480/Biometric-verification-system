@@ -143,7 +143,7 @@ export default function VoiceLoginScreen() {
 
   const verifyVoice = async () => {
     if (!recordingUri) {
-      Alert.alert(t('common.error'), 'Please record your voice first');
+      Alert.alert(t('common.error'), t('voiceLogin.recordFirst'));
       return;
     }
 
@@ -181,7 +181,7 @@ export default function VoiceLoginScreen() {
         if (attemptsLeft <= 1) {
           Alert.alert(
             t('voiceLogin.verificationFailed'),
-            'No more attempts left. Please contact support.',
+            t('voiceLogin.maxAttemptsReached'),
             [
               {
                 text: t('common.ok'),
@@ -285,10 +285,10 @@ export default function VoiceLoginScreen() {
 
           <Text style={styles.recordingStatus}>
             {isRecording
-              ? t('voiceLogin.verifying')
+              ? t('voiceLogin.tapToStop')
               : recordingUri
-              ? 'Recording ready for verification'
-              : t('voiceLogin.startVerification')}
+              ? t('voiceLogin.readyForVerification')
+              : t('voiceLogin.tapToStart')}
           </Text>
         </View>
 
@@ -307,7 +307,7 @@ export default function VoiceLoginScreen() {
             >
               <Play size={20} color="#007AFF" />
               <Text style={styles.controlButtonText}>
-                {isPlaying ? 'Playing...' : 'Play Recording'}
+                {isPlaying ? t('voiceLogin.playing') : t('voiceLogin.playRecording')}
               </Text>
             </TouchableOpacity>
 
@@ -320,8 +320,8 @@ export default function VoiceLoginScreen() {
               disabled={isVerifying}
             >
               <Mic size={20} color="#666" />
-              <Text style={[styles.controlButtonText, { color: '#666' }]}>
-                Record Again
+              <Text style={[styles.controlButtonText, { color: '#666' }] }>
+                {t('voiceEnrollment.recordAgain')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -340,7 +340,7 @@ export default function VoiceLoginScreen() {
             disabled={isVerifying}
           >
             <Text style={styles.verifyButtonText}>
-              {isVerifying ? t('common.loading') : 'Verify Voice'}
+              {isVerifying ? t('common.loading') : t('voiceLogin.startVerification')}
             </Text>
           </TouchableOpacity>
         </View>

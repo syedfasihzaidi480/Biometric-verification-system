@@ -71,8 +71,8 @@ export default function DocumentUploadScreen() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
-        'Permission Required',
-        'We need access to your photo library to select a document image.'
+        t('permissions.mediaLibrary.title'),
+        t('permissions.mediaLibrary.message')
       );
       return;
     }
@@ -121,7 +121,7 @@ export default function DocumentUploadScreen() {
     }
 
     if (!documentFile) {
-      Alert.alert(t('common.error'), 'Please capture or select a document file');
+      Alert.alert(t('common.error'), t('document.noFileSelected'));
       return;
     }
 
@@ -130,7 +130,7 @@ export default function DocumentUploadScreen() {
     try {
   const fileInfo = await FileSystem.getInfoAsync(documentFile.uri);
       if (fileInfo?.size && fileInfo.size > 15 * 1024 * 1024) {
-        Alert.alert(t('common.error'), 'Document file must be less than 15MB');
+        Alert.alert(t('common.error'), t('document.fileTooLarge15'));
         return;
       }
 
@@ -234,7 +234,7 @@ export default function DocumentUploadScreen() {
 
         {/* Instructions */}
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Tips for best results:</Text>
+          <Text style={styles.instructionsTitle}>{t('document.tipsTitle')}</Text>
           <Text style={styles.instructionItem}>• {t('document.instructions.position')}</Text>
           <Text style={styles.instructionItem}>• {t('document.instructions.lighting')}</Text>
           <Text style={styles.instructionItem}>• {t('document.instructions.clear')}</Text>
@@ -267,7 +267,7 @@ export default function DocumentUploadScreen() {
               <View style={styles.captureFrame}>
                 <View style={styles.captureFrameInner}>
                   <ImageIcon size={48} color="#D1D5DB" />
-                  <Text style={styles.captureFrameText}>Position document here</Text>
+                  <Text style={styles.captureFrameText}>{t('document.instructions.position')}</Text>
                 </View>
               </View>
               

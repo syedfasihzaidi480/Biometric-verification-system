@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import { apiFetchJson } from '@/utils/api';
 import { useAuth } from '@/utils/auth/useAuth';
 import useUser from '@/utils/auth/useUser';
+import { useTranslation } from '@/i18n/useTranslation';
 import {
   CheckCircle,
   Clock,
@@ -31,6 +32,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { isAuthenticated, signIn } = useAuth();
   const { data: authUser } = useUser();
+  const { t } = useTranslation();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -73,8 +75,8 @@ export default function HomeScreen() {
 
   const handleHelp = () => {
     Alert.alert(
-      'Need Help?',
-      'Email support@inps.gov or visit your nearest INPS office for assistance.'
+      t('help.title', { defaultValue: 'Need Help?' }),
+      t('help.message', { defaultValue: 'Email support@inps.gov or visit your nearest INPS office for assistance.' })
     );
   };
 
@@ -108,15 +110,15 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <Text style={styles.brandTitle}>Welcome to INPS</Text>
-          <Text style={styles.brandSubtitle}>Your trusted insurance system</Text>
+          <Text style={styles.brandTitle}>{t('home.brandTitle')}</Text>
+          <Text style={styles.brandSubtitle}>{t('home.brandSubtitle')}</Text>
 
           <TouchableOpacity style={styles.primaryButtonLarge} onPress={handleLogin}>
-            <Text style={styles.primaryButtonText}>Login</Text>
+            <Text style={styles.primaryButtonText}>{t('auth.login')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.secondaryButton} onPress={handleCreateAccount}>
-            <Text style={styles.secondaryButtonText}>Create Account</Text>
+            <Text style={styles.secondaryButtonText}>{t('registration.createAccount')}</Text>
           </TouchableOpacity>
 
           <View style={styles.quickActionRow}>
@@ -124,21 +126,21 @@ export default function HomeScreen() {
               <View style={styles.quickActionIcon}>
                 <Fingerprint size={22} color="#1F2937" />
               </View>
-              <Text style={styles.quickActionLabel}>Biometric</Text>
+              <Text style={styles.quickActionLabel}>{t('verify.title')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.quickAction} onPress={handleHelp}>
               <View style={styles.quickActionIcon}>
                 <HelpCircle size={22} color="#1F2937" />
               </View>
-              <Text style={styles.quickActionLabel}>Help</Text>
+              <Text style={styles.quickActionLabel}>{t('settings.items.help?.title', { defaultValue: 'Help' })}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.quickAction} onPress={handleSupport}>
               <View style={styles.quickActionIcon}>
                 <PhoneCall size={22} color="#1F2937" />
               </View>
-              <Text style={styles.quickActionLabel}>Support</Text>
+              <Text style={styles.quickActionLabel}>{t('settings.support', { defaultValue: 'Support' })}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -151,7 +153,7 @@ export default function HomeScreen() {
       <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
         <StatusBar style="dark" />
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -170,10 +172,10 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.welcomeTitle}>
-            Welcome back, {profile?.name || authUser?.name || 'User'}
+            {t('home.welcomeBack', { name: profile?.name || authUser?.name || 'User' })}
           </Text>
           <Text style={styles.subtitle}>
-            Check your verification status below
+            {t('home.checkStatusBelow')}
           </Text>
         </View>
 
@@ -183,18 +185,18 @@ export default function HomeScreen() {
             <View style={styles.shieldIcon}>
               <Text style={styles.shieldEmoji}>🛡️</Text>
             </View>
-            <Text style={styles.statusTitle}>Verification Status</Text>
+            <Text style={styles.statusTitle}>{t('home.verificationStatus')}</Text>
           </View>
           <Text style={styles.statusMessage}>
             {hasVerificationSession 
-              ? 'Continue your verification process'
-              : 'No verification session found. Start by registering your profile.'}
+              ? t('home.continueVerification')
+              : t('home.noSession')}
           </Text>
         </View>
 
         {/* Verification Steps */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Verification Steps</Text>
+          <Text style={styles.sectionTitle}>{t('home.verificationSteps')}</Text>
           
           {/* Voice Verification */}
           <TouchableOpacity 
@@ -205,8 +207,8 @@ export default function HomeScreen() {
               <Text style={styles.iconEmoji}>🎙️</Text>
             </View>
             <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>Voice Verification</Text>
-              <Text style={styles.cardSubtitle}>Record voice sample for biometric enrollment</Text>
+              <Text style={styles.cardTitle}>{t('home.voiceVerification')}</Text>
+              <Text style={styles.cardSubtitle}>{t('home.voiceVerificationSubtitle')}</Text>
             </View>
             {profile?.voice_verified ? (
               <CheckCircle size={24} color="#10B981" />
@@ -224,8 +226,8 @@ export default function HomeScreen() {
               <Text style={styles.iconEmoji}>🤳</Text>
             </View>
             <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>Face Liveness Detection</Text>
-              <Text style={styles.cardSubtitle}>Capture selfie for liveness verification</Text>
+              <Text style={styles.cardTitle}>{t('home.faceLiveness')}</Text>
+              <Text style={styles.cardSubtitle}>{t('home.faceLivenessSubtitle')}</Text>
             </View>
             {profile?.face_verified ? (
               <CheckCircle size={24} color="#10B981" />
@@ -243,8 +245,8 @@ export default function HomeScreen() {
               <Text style={styles.iconEmoji}>📄</Text>
             </View>
             <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>Document Verification</Text>
-              <Text style={styles.cardSubtitle}>Upload and verify your ID document</Text>
+              <Text style={styles.cardTitle}>{t('home.documentVerification')}</Text>
+              <Text style={styles.cardSubtitle}>{t('home.documentVerificationSubtitle')}</Text>
             </View>
             {profile?.document_verified ? (
               <CheckCircle size={24} color="#10B981" />
@@ -257,13 +259,13 @@ export default function HomeScreen() {
         {/* Next Steps */}
         {!profile?.profile_completed && (
           <View style={styles.nextStepsSection}>
-            <Text style={styles.nextStepsTitle}>Next Steps</Text>
+            <Text style={styles.nextStepsTitle}>{t('home.nextSteps')}</Text>
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => router.push('/(tabs)/register')}
             >
               <Text style={styles.primaryButtonText}>
-                Complete Profile Registration
+                {t('home.completeProfileRegistration')}
               </Text>
             </TouchableOpacity>
           </View>

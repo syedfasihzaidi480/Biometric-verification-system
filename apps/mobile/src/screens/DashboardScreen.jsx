@@ -180,14 +180,14 @@ export default function DashboardScreen() {
           {verificationStatus?.status === 'pending' && allStepsCompleted && (
             <View style={styles.pendingMessage}>
               <Text style={styles.pendingMessageText}>
-                Your verification is being reviewed by our team. You'll receive a notification once it's complete.
+                {t('dashboard.pendingReviewMessage')}
               </Text>
             </View>
           )}
 
           {verificationStatus?.status === 'rejected' && verificationStatus?.notes && (
             <View style={styles.rejectionMessage}>
-              <Text style={styles.rejectionMessageTitle}>Reason for rejection:</Text>
+              <Text style={styles.rejectionMessageTitle}>{t('dashboard.rejectionReason')}</Text>
               <Text style={styles.rejectionMessageText}>{verificationStatus.notes}</Text>
             </View>
           )}
@@ -234,7 +234,7 @@ export default function DashboardScreen() {
         {/* Quick Actions */}
         {(!allStepsCompleted || verificationStatus?.status === 'rejected') && (
           <View style={styles.actionsCard}>
-            <Text style={styles.actionsTitle}>Quick Actions</Text>
+            <Text style={styles.actionsTitle}>{t('dashboard.quickActions')}</Text>
             
             {!allStepsCompleted && (
               <TouchableOpacity
@@ -260,7 +260,7 @@ export default function DashboardScreen() {
                   router.push('/voice-enrollment');
                 }}
               >
-                <Text style={styles.actionButtonText}>Retry Verification</Text>
+                <Text style={styles.actionButtonText}>{t('dashboard.retryVerification')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -268,27 +268,27 @@ export default function DashboardScreen() {
 
         {/* Account Information */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Account Information</Text>
+          <Text style={styles.infoTitle}>{t('dashboard.accountInfo')}</Text>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Name:</Text>
+            <Text style={styles.infoLabel}>{t('dashboard.labels.name')}</Text>
             <Text style={styles.infoValue}>{userProfile?.name}</Text>
           </View>
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Phone:</Text>
+            <Text style={styles.infoLabel}>{t('dashboard.labels.phone')}</Text>
             <Text style={styles.infoValue}>{userProfile?.phone}</Text>
           </View>
           
           {userProfile?.email && (
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Email:</Text>
+              <Text style={styles.infoLabel}>{t('dashboard.labels.email')}</Text>
               <Text style={styles.infoValue}>{userProfile.email}</Text>
             </View>
           )}
           
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Member since:</Text>
+            <Text style={styles.infoLabel}>{t('dashboard.labels.memberSince')}</Text>
             <Text style={styles.infoValue}>
               {userProfile?.createdAt ? new Date(userProfile.createdAt).toLocaleDateString() : '-'}
             </Text>

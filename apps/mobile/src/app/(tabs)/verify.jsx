@@ -14,10 +14,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/utils/auth/useAuth';
 import { apiFetchJson } from '@/utils/api';
 import { CheckCircle, Clock, Mic, Camera, FileText, ArrowRight } from 'lucide-react-native';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export default function VerifyScreen() {
   const insets = useSafeAreaInsets();
   const { isAuthenticated, signIn } = useAuth();
+  const { t } = useTranslation();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const profileRef = useRef(null);
@@ -70,22 +72,22 @@ export default function VerifyScreen() {
     const steps = [
       {
         id: 'voice',
-        title: 'Voice Verification',
-        description: 'Record your voice for verification',
+        title: t('profile.voiceVerification'),
+        description: t('voiceLogin.subtitle'),
         status: 'not_started',
         route: '/voice-verification',
       },
       {
         id: 'face',
-        title: 'Face Verification',
-        description: 'Take a selfie for facial recognition',
+        title: t('profile.faceVerification'),
+        description: t('liveness.subtitle'),
         status: 'not_started',
         route: '/liveness-check',
       },
       {
         id: 'document',
-        title: 'Document Verification',
-        description: 'Upload your ID document',
+        title: t('profile.documentVerification'),
+        description: t('document.subtitle'),
         status: 'not_started',
         route: '/document-upload',
       },
@@ -158,13 +160,13 @@ export default function VerifyScreen() {
   const getStatusText = (status) => {
     switch (status) {
       case 'verified':
-        return 'Verified';
+        return t('verify.statuses.verified');
       case 'available':
-        return 'Start Verification';
+        return t('verify.statuses.start');
       case 'in_progress':
-        return 'In Progress';
+        return t('verify.statuses.inProgress');
       default:
-        return 'Not Started';
+        return t('verify.statuses.notStarted');
     }
   };
 
@@ -187,12 +189,10 @@ export default function VerifyScreen() {
     }
 
     if (step.id === 'face' && !profile?.voice_verified) {
-      alert('Please complete voice verification first');
       return;
     }
 
     if (step.id === 'document' && !profile?.face_verified) {
-      alert('Please complete face verification first');
       return;
     }
 
@@ -224,12 +224,10 @@ export default function VerifyScreen() {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <StatusBar style="dark" />
         <View style={styles.centerContent}>
-          <Text style={styles.title}>Sign In Required</Text>
-          <Text style={styles.subtitle}>
-            Please sign in to access verification features
-          </Text>
+          <Text style={styles.title}>{t('verify.signInRequired')}</Text>
+          <Text style={styles.subtitle}>{t('verify.pleaseSignIn')}</Text>
           <TouchableOpacity style={styles.primaryButton} onPress={() => signIn()}>
-            <Text style={styles.primaryButtonText}>Sign In</Text>
+            <Text style={styles.primaryButtonText}>{t('auth.signIn')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -242,7 +240,7 @@ export default function VerifyScreen() {
         <StatusBar style="dark" />
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Loading verification status...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </View>
     );
@@ -253,15 +251,13 @@ export default function VerifyScreen() {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <StatusBar style="dark" />
         <View style={styles.centerContent}>
-          <Text style={styles.title}>Complete Your Profile</Text>
-          <Text style={styles.subtitle}>
-            Please complete your profile before starting verification
-          </Text>
+          <Text style={styles.title}>{t('verify.completeYourProfile')}</Text>
+          <Text style={styles.subtitle}>{t('verify.pleaseCompleteProfileFirst')}</Text>
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => router.push('/(tabs)/profile')}
           >
-            <Text style={styles.primaryButtonText}>Go to Profile</Text>
+            <Text style={styles.primaryButtonText}>{t('verify.goToProfile')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -273,15 +269,15 @@ export default function VerifyScreen() {
       <StatusBar style="dark" />
 
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Identity Verification</Text>
+        <Text style={styles.headerTitle}>{t('verify.title')}</Text>
         <Text style={styles.headerSubtitle}>
-          Complete all steps to verify your identity
+          {t('verify.subtitle')}
         </Text>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Verification Progress</Text>
+          <Text style={styles.sectionTitle}>{t('verify.progress')}</Text>
 
           {verificationSteps.map((step, index) => {
             const StepIcon = getStepIcon(step.id);
@@ -331,10 +327,10 @@ export default function VerifyScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Overall Status</Text>
+          <Text style={styles.sectionTitle}>{t('verify.overallStatus')}</Text>
           <View style={styles.progressCard}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressTitle}>Verification Progress</Text>
+              <Text style={styles.progressTitle}>{t('verify.progress')}</Text>
               <Text style={styles.progressPercentage}>{Math.round(progress)}%</Text>
             </View>
             <View style={styles.progressBarContainer}>
@@ -342,22 +338,16 @@ export default function VerifyScreen() {
             </View>
             <Text style={styles.progressDescription}>
               {progress === 100
-                ? 'All verification steps completed!'
-                : `${Math.round(progress / 33.33)} of 3 steps completed`}
+                ? t('verify.allStepsCompleted')
+                : t('verify.stepsCompletedOf', { count: Math.round(progress / 33.33) })}
             </Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Instructions</Text>
+          <Text style={styles.sectionTitle}>{t('verify.instructions')}</Text>
           <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsText}>
-              • Complete verification steps in order{'\n'}
-              • Ensure good lighting for photo verification{'\n'}
-              • Have your ID document ready{'\n'}
-              • Speak clearly during voice verification{'\n'}
-              • All verifications are secure and encrypted
-            </Text>
+            <Text style={styles.instructionsText}>{t('verify.bulletPoints')}</Text>
           </View>
         </View>
 

@@ -29,7 +29,7 @@ export default function ProfileScreen() {
           });
         }
       } catch (e) {
-        Alert.alert('Error', e?.message || 'Failed to load profile');
+  Alert.alert(t('common.error'), e?.message || t('errors.server'));
       } finally {
         setLoading(false);
       }
@@ -53,10 +53,10 @@ export default function ProfileScreen() {
           preferred_language: currentLanguage,
         },
       });
-      Alert.alert('Success', 'Profile updated successfully');
+  Alert.alert(t('common.success'), t('profile.updated'));
       router.back();
     } catch (e) {
-      Alert.alert('Error', e?.message || 'Failed to save profile');
+  Alert.alert(t('common.error'), e?.message || t('errors.server'));
     } finally {
       setSaving(false);
     }
@@ -70,7 +70,7 @@ export default function ProfileScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
+  <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings.items.profile.title')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -86,16 +86,17 @@ export default function ProfileScreen() {
 }
 
 function KeyboardAvoidingScreen({ onSave, saving, colors, form, onChange }) {
+  const { t } = useTranslation();
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
-        <Field label="Full Name" value={form.name} onChangeText={(v) => onChange('name', v)} colors={colors} />
-        <Field label="Phone" value={form.phone} onChangeText={(v) => onChange('phone', v)} colors={colors} keyboardType="phone-pad" />
-        <Field label="Email (optional)" value={form.email} onChangeText={(v) => onChange('email', v)} colors={colors} keyboardType="email-address" />
+        <Field label={t('registration.fullName')} value={form.name} onChangeText={(v) => onChange('name', v)} colors={colors} />
+        <Field label={t('registration.phoneNumber')} value={form.phone} onChangeText={(v) => onChange('phone', v)} colors={colors} keyboardType="phone-pad" />
+        <Field label={`${t('registration.email')} (${t('registration.emailOptionalTag')})`} value={form.email} onChangeText={(v) => onChange('email', v)} colors={colors} keyboardType="email-address" />
 
         <TouchableOpacity onPress={onSave} disabled={saving} style={[styles.saveButton, { backgroundColor: colors.primary, opacity: saving ? 0.7 : 1 }]}> 
           <Save size={18} color="#fff" />
-          <Text style={styles.saveText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
+          <Text style={styles.saveText}>{saving ? t('common.loading') : t('common.save')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

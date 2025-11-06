@@ -27,11 +27,13 @@ import {
   CreditCard,
   Settings
 } from 'lucide-react-native';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { isAuthenticated, signIn, signOut } = useAuth();
   const { data: authUser } = useUser();
+  const { t } = useTranslation();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -65,7 +67,7 @@ export default function ProfileScreen() {
   };
 
   const getStatusText = (isCompleted) => {
-    return isCompleted ? 'Verified' : 'Not Started';
+    return isCompleted ? t('verify.statuses.verified') : t('verify.statuses.notStarted');
   };
 
   const getStatusColor = (isCompleted) => {
@@ -74,15 +76,15 @@ export default function ProfileScreen() {
 
   const handleSignOut = () => {
     Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
+      t('profile.signOutConfirmTitle'),
+      t('profile.signOutConfirmMessage'),
       [
         {
-          text: 'Cancel',
+          text: t('profile.cancel'),
           style: 'cancel',
         },
         {
-          text: 'Sign Out',
+          text: t('profile.signOut'),
           style: 'destructive',
           onPress: () => signOut(),
         },
@@ -91,7 +93,7 @@ export default function ProfileScreen() {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'Not provided';
+    if (!dateString) return t('profile.notProvided');
     const date = new Date(dateString);
     return date.toLocaleDateString();
   };
@@ -101,14 +103,14 @@ export default function ProfileScreen() {
       <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
         <StatusBar style="dark" />
         
-        <Text style={styles.title}>Please Sign In</Text>
-        <Text style={styles.subtitle}>You need to sign in to view your profile</Text>
+        <Text style={styles.title}>{t('auth.signInRequired')}</Text>
+        <Text style={styles.subtitle}>{t('auth.pleaseSignInToViewProfile')}</Text>
         
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={() => signIn()}
         >
-          <Text style={styles.primaryButtonText}>Sign In</Text>
+          <Text style={styles.primaryButtonText}>{t('auth.signIn')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -119,7 +121,7 @@ export default function ProfileScreen() {
       <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
         <StatusBar style="dark" />
         <ActivityIndicator size="large" color="#3B82F6" />
-        <Text style={styles.loadingText}>Loading profile...</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -130,7 +132,7 @@ export default function ProfileScreen() {
       
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
         <TouchableOpacity accessibilityLabel="Open Settings" onPress={() => router.push('/settings')} style={styles.headerAction}>
           <Settings size={22} color="#1F2937" />
         </TouchableOpacity>
@@ -155,19 +157,19 @@ export default function ProfileScreen() {
           {profile?.admin_approved ? (
             <View style={styles.approvedBadge}>
               <CheckCircle size={16} color="#10B981" />
-              <Text style={styles.approvedText}>Verified Account</Text>
+              <Text style={styles.approvedText}>{t('profile.verifiedAccount')}</Text>
             </View>
           ) : (
             <View style={styles.pendingBadge}>
               <Clock size={16} color="#F59E0B" />
-              <Text style={styles.pendingText}>Pending Verification</Text>
+              <Text style={styles.pendingText}>{t('profile.pendingVerification')}</Text>
             </View>
           )}
         </View>
 
         {/* Account Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account Information</Text>
+          <Text style={styles.sectionTitle}>{t('profile.accountInformation')}</Text>
           
           <View style={styles.infoCard}>
             <View style={styles.infoItem}>
@@ -175,8 +177,8 @@ export default function ProfileScreen() {
                 <User size={16} color="#6B7280" />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Full Name</Text>
-                <Text style={styles.infoValue}>{profile?.name || 'Not provided'}</Text>
+                <Text style={styles.infoLabel}>{t('profile.fullName')}</Text>
+                <Text style={styles.infoValue}>{profile?.name || t('profile.notProvided')}</Text>
               </View>
             </View>
 
@@ -185,8 +187,8 @@ export default function ProfileScreen() {
                 <Phone size={16} color="#6B7280" />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Phone Number</Text>
-                <Text style={styles.infoValue}>{profile?.phone || 'Not provided'}</Text>
+                <Text style={styles.infoLabel}>{t('profile.phoneNumber')}</Text>
+                <Text style={styles.infoValue}>{profile?.phone || t('profile.notProvided')}</Text>
               </View>
             </View>
 
@@ -195,8 +197,8 @@ export default function ProfileScreen() {
                 <Mail size={16} color="#6B7280" />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Email</Text>
-                <Text style={styles.infoValue}>{profile?.email || authUser?.email || 'Not provided'}</Text>
+                <Text style={styles.infoLabel}>{t('profile.email')}</Text>
+                <Text style={styles.infoValue}>{profile?.email || authUser?.email || t('profile.notProvided')}</Text>
               </View>
             </View>
 
@@ -205,7 +207,7 @@ export default function ProfileScreen() {
                 <Calendar size={16} color="#6B7280" />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Date of Birth</Text>
+                <Text style={styles.infoLabel}>{t('profile.dateOfBirth')}</Text>
                 <Text style={styles.infoValue}>{formatDate(profile?.date_of_birth)}</Text>
               </View>
             </View>
@@ -214,12 +216,12 @@ export default function ProfileScreen() {
 
         {/* Verification Status */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Verification Status</Text>
+          <Text style={styles.sectionTitle}>{t('profile.verificationStatus')}</Text>
           
           <View style={styles.verificationCard}>
             <View style={styles.verificationItem}>
               <View style={styles.verificationHeader}>
-                <Text style={styles.verificationLabel}>Voice Verification</Text>
+                <Text style={styles.verificationLabel}>{t('profile.voiceVerification')}</Text>
                 {getStatusIcon(profile?.voice_verified)}
               </View>
               <Text style={[
@@ -234,7 +236,7 @@ export default function ProfileScreen() {
 
             <View style={styles.verificationItem}>
               <View style={styles.verificationHeader}>
-                <Text style={styles.verificationLabel}>Face Verification</Text>
+                <Text style={styles.verificationLabel}>{t('profile.faceVerification')}</Text>
                 {getStatusIcon(profile?.face_verified)}
               </View>
               <Text style={[
@@ -249,7 +251,7 @@ export default function ProfileScreen() {
 
             <View style={styles.verificationItem}>
               <View style={styles.verificationHeader}>
-                <Text style={styles.verificationLabel}>Document Verification</Text>
+                <Text style={styles.verificationLabel}>{t('profile.documentVerification')}</Text>
                 {getStatusIcon(profile?.document_verified)}
               </View>
               <Text style={[
@@ -264,7 +266,7 @@ export default function ProfileScreen() {
 
         {/* Admin Review Status */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Admin Review Status</Text>
+          <Text style={styles.sectionTitle}>{t('profile.adminReviewStatus')}</Text>
           
           <View style={styles.adminCard}>
             <View style={styles.adminItem}>
@@ -272,12 +274,12 @@ export default function ProfileScreen() {
                 <Shield size={16} color="#6B7280" />
               </View>
               <View style={styles.adminContent}>
-                <Text style={styles.adminLabel}>Admin Approval</Text>
+                <Text style={styles.adminLabel}>{t('profile.adminApproval')}</Text>
                 <Text style={[
                   styles.adminStatus,
                   { color: profile?.admin_approved ? '#10B981' : '#F59E0B' }
                 ]}>
-                  {profile?.admin_approved ? 'Approved' : 'Pending Review'}
+                  {profile?.admin_approved ? t('profile.approved') : t('profile.pending')}
                 </Text>
               </View>
             </View>
@@ -289,12 +291,12 @@ export default function ProfileScreen() {
                 <CreditCard size={16} color="#6B7280" />
               </View>
               <View style={styles.adminContent}>
-                <Text style={styles.adminLabel}>Payment Status</Text>
+                <Text style={styles.adminLabel}>{t('profile.paymentStatus')}</Text>
                 <Text style={[
                   styles.adminStatus,
                   { color: profile?.payment_released ? '#10B981' : '#F59E0B' }
                 ]}>
-                  {profile?.payment_released ? 'Released' : 'Pending'}
+                  {profile?.payment_released ? t('profile.released') : t('profile.pending')}
                 </Text>
               </View>
             </View>
@@ -308,7 +310,7 @@ export default function ProfileScreen() {
             onPress={handleSignOut}
           >
             <LogOut size={20} color="#DC2626" />
-            <Text style={styles.signOutText}>Sign Out</Text>
+            <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

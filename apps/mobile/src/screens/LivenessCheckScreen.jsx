@@ -193,7 +193,7 @@ export default function LivenessCheckScreen() {
       if (message.includes('No selfie captured')) {
         Alert.alert(
           t('liveness.livenessFailed'),
-          'We could not capture your selfie. Please ensure camera permission is granted, your face is within the frame, and try again.',
+          t('liveness.noSelfieCaptured'),
           [{ text: t('common.retry') }]
         );
       } else {
@@ -248,7 +248,7 @@ export default function LivenessCheckScreen() {
   if (!permission) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <Text>Requesting camera permission...</Text>
+        <Text>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -311,7 +311,7 @@ export default function LivenessCheckScreen() {
           {isCapturing && (
             <View style={styles.progressContainer}>
               <Text style={styles.progressText}>
-                Step {instructionStep + 1} of {instructions.length}
+                {t('liveness.stepOf', { current: instructionStep + 1, total: instructions.length })}
               </Text>
               <View style={styles.progressBar}>
                 <View
@@ -339,7 +339,7 @@ export default function LivenessCheckScreen() {
         {!isCapturing && !isProcessing && !isCameraReady && (
           <View style={styles.processingContainer}>
             <RotateCw size={24} color="#007AFF" />
-            <Text style={styles.processingText}>Preparing camera…</Text>
+            <Text style={styles.processingText}>{t('liveness.preparingCamera')}</Text>
           </View>
         )}
 

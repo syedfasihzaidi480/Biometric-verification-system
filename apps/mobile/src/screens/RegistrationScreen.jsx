@@ -45,14 +45,14 @@ export default function RegistrationScreen() {
 
     // Date validation (DD/MM/YYYY format)
     if (!formData.dateOfBirth.trim()) {
-      newErrors.dateOfBirth = "Date of birth is required";
+      newErrors.dateOfBirth = t('registration.dateRequired');
     } else if (!/^\d{2}\/\d{2}\/\d{4}$/.test(formData.dateOfBirth.trim())) {
-      newErrors.dateOfBirth = "Please enter date in DD/MM/YYYY format";
+      newErrors.dateOfBirth = t('registration.dateFormat');
     }
 
     // Pension number validation
     if (!formData.pensionNumber.trim()) {
-      newErrors.pensionNumber = "Pension number is required";
+      newErrors.pensionNumber = t('registration.pensionRequired');
     }
 
     // Phone validation
@@ -64,14 +64,14 @@ export default function RegistrationScreen() {
 
     // Email validation
     if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      newErrors.email = "Please enter a valid email address";
+      newErrors.email = t('registration.validEmail');
     }
 
     // Password validation
     if (!formData.password.trim()) {
-      newErrors.password = "Password is required";
+      newErrors.password = t('registration.passwordRequired');
     } else if (formData.password.trim().length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+      newErrors.password = t('registration.passwordMin');
     }
 
     setErrors(newErrors);
@@ -238,7 +238,7 @@ export default function RegistrationScreen() {
 
             {/* Pension Number */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Pension Number *</Text>
+              <Text style={styles.label}>{t('registration.pensionNumber')} *</Text>
               <View
                 style={[
                   styles.inputContainer,
@@ -252,7 +252,7 @@ export default function RegistrationScreen() {
                   onChangeText={(value) =>
                     updateFormData("pensionNumber", value)
                   }
-                  placeholder="Enter your pension number"
+                  placeholder={t('registration.pensionNumberPlaceholder')}
                   autoCapitalize="characters"
                 />
               </View>
@@ -264,7 +264,7 @@ export default function RegistrationScreen() {
             {/* Phone Number */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
-                {t("registration.phoneNumber")} (Include area code) *
+                {t("registration.phoneNumber")} {t('registration.phoneIncludeAreaCode')} *
               </Text>
               <View
                 style={[
@@ -277,7 +277,7 @@ export default function RegistrationScreen() {
                   style={styles.textInput}
                   value={formData.phoneNumber}
                   onChangeText={(value) => updateFormData("phoneNumber", value)}
-                  placeholder="+1 (555) 123-4567"
+                  placeholder={t('registration.phoneNumberPlaceholder')}
                   keyboardType="phone-pad"
                   autoComplete="tel"
                 />
@@ -320,7 +320,7 @@ export default function RegistrationScreen() {
 
             {/* Password */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password *</Text>
+              <Text style={styles.label}>{t('registration.password')} *</Text>
               <View
                 style={[
                   styles.inputContainer,
@@ -332,7 +332,7 @@ export default function RegistrationScreen() {
                   style={styles.textInput}
                   value={formData.password}
                   onChangeText={(value) => updateFormData("password", value)}
-                  placeholder="Create a password"
+                  placeholder={t('registration.passwordPlaceholder')}
                   secureTextEntry
                   autoCapitalize="none"
                   autoComplete="password"

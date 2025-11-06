@@ -53,35 +53,38 @@ export default function SettingsScreen() {
     })();
   }, []);
 
+  // Supported languages for the app (default: English)
   const languages = [
     { code: 'en', name: 'English', nativeName: 'English' },
     { code: 'fr', name: 'French', nativeName: 'Français' },
     { code: 'so', name: 'Somali', nativeName: 'Soomaali' },
-    { code: 'am', name: 'Amharic', nativeName: 'አማርኛ' },
-    { code: 'om', name: 'Oromo', nativeName: 'Afaan Oromoo' }
   ];
 
   const handleLanguageChange = () => {
     Alert.alert(
       t('settings.changeLanguage'),
-      'Select your preferred language',
-      languages.map(lang => ({
-        text: `${lang.nativeName} (${lang.name})`,
-        onPress: () => {
-          changeLanguage(lang.code);
-          // Best-effort: persist language preference to server immediately
-          (async () => {
-            try {
-              await apiFetchJson('/api/profile', { method: 'PUT', body: { preferred_language: lang.code } });
-            } catch {}
-          })();
-          Alert.alert('Language Changed', `Language changed to ${lang.name}`);
-        },
-        style: lang.code === currentLanguage ? 'destructive' : 'default'
-      })).concat([{
-        text: 'Cancel',
-        style: 'cancel'
-      }])
+      t('settings.selectLanguage'),
+      languages
+        .map((lang) => ({
+          text: `${lang.nativeName} (${lang.name})`,
+          onPress: () => {
+            changeLanguage(lang.code);
+            // Best-effort: persist language preference to server immediately
+            (async () => {
+              try {
+                await apiFetchJson('/api/profile', { method: 'PUT', body: { preferred_language: lang.code } });
+              } catch {}
+            })();
+            Alert.alert(t('settings.languageChangedTitle'), t('settings.languageChangedMessage', { name: lang.name }));
+          },
+          style: lang.code === currentLanguage ? 'destructive' : 'default',
+        }))
+        .concat([
+          {
+            text: t('common.cancel'),
+            style: 'cancel',
+          },
+        ])
     );
   };
 
@@ -147,12 +150,12 @@ export default function SettingsScreen() {
 
   const settingSections = [
     {
-      title: 'Account',
+      title: t('settings.sections.account'),
       items: [
         {
           icon: <User size={20} color="#007AFF" />,
-          title: 'Profile',
-          subtitle: 'Manage your account information',
+          title: t('settings.items.profile.title'),
+          subtitle: t('settings.items.profile.subtitle'),
           onPress: () => router.push('/profile'),
         },
         {
@@ -164,66 +167,66 @@ export default function SettingsScreen() {
       ],
     },
     {
-      title: 'Privacy & Security',
+      title: t('settings.sections.privacySecurity'),
       items: [
         {
           icon: <Bell size={20} color="#007AFF" />,
-          title: 'Notifications',
-          subtitle: 'Manage notification preferences',
+          title: t('settings.items.notifications.title'),
+          subtitle: t('settings.items.notifications.subtitle'),
           hasSwitch: true,
           switchValue: notifications,
           onSwitchChange: handleToggleNotifications,
         },
         {
           icon: <Shield size={20} color="#007AFF" />,
-          title: 'Biometric Lock',
-          subtitle: 'Use face/fingerprint to unlock',
+          title: t('settings.items.biometric.title'),
+          subtitle: t('settings.items.biometric.subtitle'),
           hasSwitch: true,
           switchValue: biometricLock,
           onSwitchChange: handleToggleBiometric,
         },
         {
           icon: <Lock size={20} color="#007AFF" />,
-          title: 'Privacy Settings',
-          subtitle: 'Manage your data and privacy',
+          title: t('settings.items.privacy.title'),
+          subtitle: t('settings.items.privacy.subtitle'),
           onPress: () => router.push('/privacy'),
         },
       ],
     },
     {
-      title: 'App Settings',
+      title: t('settings.sections.appSettings'),
       items: [
         {
           icon: <Moon size={20} color="#007AFF" />,
-          title: 'Dark Mode',
-          subtitle: 'Toggle dark theme',
+          title: t('settings.items.darkMode.title'),
+          subtitle: t('settings.items.darkMode.subtitle'),
           hasSwitch: true,
           switchValue: darkMode,
           onSwitchChange: handleToggleDarkMode,
         },
         {
           icon: <Info size={20} color="#FF9500" />,
-          title: 'Reset Onboarding',
-          subtitle: 'View onboarding screens again',
+          title: t('settings.items.resetOnboarding.title'),
+          subtitle: t('settings.items.resetOnboarding.subtitle'),
           onPress: async () => {
             Alert.alert(
-              'Reset Onboarding',
-              'This will show the onboarding screens next time you open the app. Continue?',
+              t('settings.resetOnboarding.confirmTitle'),
+              t('settings.resetOnboarding.confirmMessage'),
               [
                 {
-                  text: 'Cancel',
+                  text: t('common.cancel'),
                   style: 'cancel',
                 },
                 {
-                  text: 'Reset',
+                  text: t('settings.resetOnboarding.resetAction'),
                   onPress: async () => {
                     await resetOnboarding();
                     Alert.alert(
-                      'Success',
-                      'Onboarding reset! Close and reopen the app to see it.',
+                      t('settings.resetOnboarding.successTitle'),
+                      t('settings.resetOnboarding.successMessage'),
                       [
                         {
-                          text: 'OK',
+                          text: t('common.ok'),
                           onPress: () => router.replace('/'),
                         },
                       ]
@@ -237,24 +240,24 @@ export default function SettingsScreen() {
       ],
     },
     {
-      title: 'Support',
+      title: t('settings.sections.support'),
       items: [
         {
           icon: <HelpCircle size={20} color="#007AFF" />,
-          title: 'Help & Support',
-          subtitle: 'Get help and contact support',
+          title: t('settings.items.help.title'),
+          subtitle: t('settings.items.help.subtitle'),
           onPress: () => {
-            Alert.alert('Help', 'Help & Support coming soon');
+            Alert.alert(t('settings.items.help.title'), t('settings.items.help.comingSoon'));
           },
         },
         {
           icon: <Info size={20} color="#007AFF" />,
           title: t('settings.about'),
-          subtitle: 'App version and information',
+          subtitle: t('settings.items.about.subtitle'),
           onPress: () => {
             Alert.alert(
-              'About Voice Biometrics',
-              'Version 1.0.0\n\nSecure identity verification made simple.\n\n© 2025 Voice Biometrics Inc.'
+              t('settings.items.about.title'),
+              t('settings.items.about.message')
             );
           },
         },

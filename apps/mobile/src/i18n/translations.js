@@ -1,5 +1,31 @@
 // English translations
 export const en = {
+  auth: {
+    signIn: 'Sign In',
+    login: 'Login',
+    signInRequired: 'Sign In Required',
+    pleaseSignIn: 'Please sign in to continue',
+    pleaseSignInToViewProfile: 'You need to sign in to view your profile',
+    pleaseSignInToRegister: 'You need to sign in to complete profile registration',
+  },
+  home: {
+    brandTitle: 'Welcome to INPS',
+    brandSubtitle: 'Your trusted insurance system',
+    welcomeBack: 'Welcome back, {{name}}',
+    checkStatusBelow: 'Check your verification status below',
+    verificationStatus: 'Verification Status',
+    continueVerification: 'Continue your verification process',
+    noSession: 'No verification session found. Start by registering your profile.',
+    verificationSteps: 'Verification Steps',
+    voiceVerification: 'Voice Verification',
+    voiceVerificationSubtitle: 'Record voice sample for biometric enrollment',
+    faceLiveness: 'Face Liveness Detection',
+    faceLivenessSubtitle: 'Capture selfie for liveness verification',
+    documentVerification: 'Document Verification',
+    documentVerificationSubtitle: 'Upload and verify your ID document',
+    nextSteps: 'Next Steps',
+    completeProfileRegistration: 'Complete Profile Registration',
+  },
   privacyScreen: {
     title: 'Privacy Settings',
     sections: {
@@ -59,6 +85,7 @@ export const en = {
     fullNamePlaceholder: 'Enter your full name',
     phoneNumber: 'Phone Number',
     phoneNumberPlaceholder: 'Enter your phone number',
+  phoneIncludeAreaCode: '(Include area code)',
     email: 'Email',
     emailPlaceholder: 'Enter your email address',
     emailOptionalTag: 'Optional',
@@ -71,6 +98,43 @@ export const en = {
     validEmail: 'Please enter a valid email address',
     terms: 'By continuing, you agree to our Terms of Service and Privacy Policy',
     requiredNote: '* Required fields (email is optional)',
+    dateRequired: 'Date of birth is required',
+    dateFormat: 'Please enter date in DD/MM/YYYY format',
+    pensionNumber: 'Pension Number',
+    pensionNumberPlaceholder: 'Enter your pension number',
+    pensionRequired: 'Pension number is required',
+    password: 'Password',
+    passwordPlaceholder: 'Create a password',
+    passwordRequired: 'Password is required',
+    passwordMin: 'Password must be at least 6 characters',
+    personalInformation: 'Personal Information',
+    idDocumentType: 'ID Document Type',
+    idDocumentUpload: 'ID Document Upload',
+    documentSelected: 'Document Selected',
+    tapToUploadId: 'Tap to upload your ID document',
+    supportedFormats: 'Supported formats: JPG, PNG, PDF',
+    saveProfile: 'Save Profile',
+  },
+  verify: {
+    title: 'Identity Verification',
+    subtitle: 'Complete all steps to verify your identity',
+    progress: 'Verification Progress',
+    overallStatus: 'Overall Status',
+    allStepsCompleted: 'All verification steps completed!',
+    stepsCompletedOf: '{{count}} of 3 steps completed',
+    instructions: 'Instructions',
+    bulletPoints: '• Complete verification steps in order\n• Ensure good lighting for photo verification\n• Have your ID document ready\n• Speak clearly during voice verification\n• All verifications are secure and encrypted',
+    statuses: {
+      verified: 'Verified',
+      start: 'Start Verification',
+      inProgress: 'In Progress',
+      notStarted: 'Not Started'
+    },
+    signInRequired: 'Sign In Required',
+    pleaseSignIn: 'Please sign in to access verification features',
+    completeYourProfile: 'Complete Your Profile',
+    pleaseCompleteProfileFirst: 'Please complete your profile before starting verification',
+    goToProfile: 'Go to Profile'
   },
   voiceEnrollment: {
     title: 'Voice Enrollment',
@@ -92,18 +156,29 @@ export const en = {
       message: 'We need your consent to collect and process your voice biometric data for identity verification purposes.',
       understand: 'I understand that my voice will be processed for verification',
       agree: 'I Agree'
-    }
+    },
+    recording: 'Recording...',
+    recordingComplete: 'Recording Complete',
+    enrolledMessage: 'Your voice has been successfully enrolled'
   },
   voiceLogin: {
     title: 'Voice Verification',
     subtitle: 'Verify your identity with your voice',
     instructions: 'Please say the following phrase:',
     loginScript: 'My voice is my passport. Verify my identity now.',
+  enrollNow: 'Enroll Now',
+  enrollmentRequiredTitle: 'Voice Enrollment Required',
+  enrollmentRequiredMessage: 'You need to enroll your voice before you can verify. Would you like to enroll now?',
     startVerification: 'Start Verification',
     verifying: 'Verifying your voice...',
     verificationSuccess: 'Voice verified successfully!',
     verificationFailed: 'Voice verification failed. Please try again.',
-    attemptsLeft: '{{attempts}} attempts remaining'
+    attemptsLeft: '{{attempts}} attempts remaining',
+    tapToStart: 'Tap to start verification',
+    tapToStop: 'Tap to stop and verify',
+    maxAttemptsReached: 'Maximum attempts reached',
+    verifiedProceed: 'Your identity has been verified. You can now proceed.',
+    recordFirst: 'Please record your voice first'
   },
   liveness: {
     title: 'Liveness Check',
@@ -127,7 +202,9 @@ export const en = {
       message: 'We need your consent to capture and analyze your facial image for liveness detection.',
       understand: 'I understand that my facial image will be analyzed',
       agree: 'I Agree'
-    }
+    },
+    preparingCamera: 'Preparing camera…',
+    stepOf: 'Step {{current}} of {{total}}'
   },
   document: {
     title: 'Document Upload',
@@ -155,11 +232,15 @@ export const en = {
       lighting: 'Ensure good lighting',
       clear: 'Make sure the document is clear and readable',
       flat: 'Keep the document flat'
-    }
+    },
+    tipsTitle: 'Tips for best results:',
+    noFileSelected: 'Please capture or select a document file',
+    fileTooLarge15: 'Document file must be less than 15MB'
   },
   dashboard: {
     title: 'Dashboard',
     welcome: 'Welcome, {{name}}',
+    welcomeBack: 'Welcome back, {{name}}',
     verificationStatus: 'Verification Status',
     status: {
       pending: 'Under Review',
@@ -174,12 +255,75 @@ export const en = {
       documentUpload: 'Document Upload'
     },
     viewDetails: 'View Details',
-    startVerification: 'Start Verification'
+    startVerification: 'Start Verification',
+    pendingReviewMessage: "Your verification is being reviewed by our team. You'll receive a notification once it's complete.",
+    rejectionReason: 'Reason for rejection:',
+    quickActions: 'Quick Actions',
+    retryVerification: 'Retry Verification',
+    accountInfo: 'Account Information',
+    labels: {
+      name: 'Name:',
+      phone: 'Phone:',
+      email: 'Email:',
+      memberSince: 'Member since:',
+    }
   },
   settings: {
     title: 'Settings',
     language: 'Language',
     changeLanguage: 'Change Language',
+    selectLanguage: 'Select your preferred language',
+    languageChangedTitle: 'Language Changed',
+    languageChangedMessage: 'Language changed to {{name}}',
+    sections: {
+      account: 'Account',
+      privacySecurity: 'Privacy & Security',
+      appSettings: 'App Settings',
+      support: 'Support',
+    },
+    items: {
+      profile: {
+        title: 'Profile',
+        subtitle: 'Manage your account information',
+      },
+      notifications: {
+        title: 'Notifications',
+        subtitle: 'Manage notification preferences',
+      },
+      biometric: {
+        title: 'Biometric Lock',
+        subtitle: 'Use face/fingerprint to unlock',
+      },
+      privacy: {
+        title: 'Privacy Settings',
+        subtitle: 'Manage your data and privacy',
+      },
+      darkMode: {
+        title: 'Dark Mode',
+        subtitle: 'Toggle dark theme',
+      },
+      resetOnboarding: {
+        title: 'Reset Onboarding',
+        subtitle: 'View onboarding screens again',
+      },
+      help: {
+        title: 'Help & Support',
+        subtitle: 'Get help and contact support',
+        comingSoon: 'Help & Support coming soon',
+      },
+      about: {
+        title: 'About Voice Biometrics',
+        subtitle: 'App version and information',
+        message: 'Version 1.0.0\n\nSecure identity verification made simple.\n\n© 2025 Voice Biometrics Inc.',
+      },
+    },
+    resetOnboarding: {
+      confirmTitle: 'Reset Onboarding',
+      confirmMessage: 'This will show the onboarding screens next time you open the app. Continue?',
+      resetAction: 'Reset',
+      successTitle: 'Success',
+      successMessage: 'Onboarding reset! Close and reopen the app to see it.',
+    },
     account: 'Account',
     profile: 'Profile',
     privacy: 'Privacy',
@@ -188,6 +332,42 @@ export const en = {
     about: 'About',
     version: 'Version',
     logout: 'Sign Out'
+  },
+  profile: {
+    updated: 'Profile updated successfully',
+    title: 'Profile',
+    verifiedAccount: 'Verified Account',
+    pendingVerification: 'Pending Verification',
+    accountInformation: 'Account Information',
+    fullName: 'Full Name',
+    phoneNumber: 'Phone Number',
+    email: 'Email',
+    notProvided: 'Not provided',
+    dateOfBirth: 'Date of Birth',
+    verificationStatus: 'Verification Status',
+    voiceVerification: 'Voice Verification',
+    faceVerification: 'Face Verification',
+    documentVerification: 'Document Verification',
+    adminReviewStatus: 'Admin Review Status',
+    adminApproval: 'Admin Approval',
+    approved: 'Approved',
+    pending: 'Pending',
+    paymentStatus: 'Payment Status',
+    released: 'Released',
+    signOut: 'Sign Out',
+    signOutConfirmTitle: 'Sign Out',
+    signOutConfirmMessage: 'Are you sure you want to sign out?',
+    cancel: 'Cancel'
+  },
+  verificationSubmitted: {
+    title: 'Verification Submitted',
+    subtitle: 'Your documents were uploaded successfully and are now pending review by our compliance team.',
+    statusPending: 'Status: Pending Review',
+    notify: 'We will notify you once the verification is complete. This typically takes less than 24 hours.',
+    tamperNotice: 'We detected a potential issue with the document image. An agent has been notified to take a closer look.',
+    referenceId: 'Reference ID: {{id}}',
+    viewStatus: 'View Verification Status',
+    goToDashboard: 'Go to Dashboard'
   },
   errors: {
     network: 'Network error. Please check your connection.',
@@ -212,6 +392,10 @@ export const en = {
       title: 'Microphone Permission Required', 
       message: 'We need access to your microphone to record your voice for verification.'
     },
+    mediaLibrary: {
+      title: 'Photo Library Permission Required',
+      message: 'We need access to your photo library to select a document image.'
+    },
     allowAccess: 'Allow Access',
     openSettings: 'Open Settings'
   }
@@ -219,6 +403,32 @@ export const en = {
 
 // French translations
 export const fr = {
+  auth: {
+    signIn: 'Se connecter',
+    login: 'Connexion',
+    signInRequired: 'Connexion requise',
+    pleaseSignIn: 'Veuillez vous connecter pour continuer',
+    pleaseSignInToViewProfile: 'Vous devez vous connecter pour voir votre profil',
+    pleaseSignInToRegister: 'Vous devez vous connecter pour compléter l’enregistrement du profil',
+  },
+  home: {
+    brandTitle: 'Bienvenue à l’INPS',
+    brandSubtitle: 'Votre système d’assurance de confiance',
+    welcomeBack: 'Bon retour, {{name}}',
+    checkStatusBelow: 'Vérifiez votre statut de vérification ci-dessous',
+    verificationStatus: 'Statut de vérification',
+    continueVerification: 'Continuez votre processus de vérification',
+    noSession: 'Aucune session de vérification trouvée. Commencez par enregistrer votre profil.',
+    verificationSteps: 'Étapes de vérification',
+    voiceVerification: 'Vérification vocale',
+    voiceVerificationSubtitle: 'Enregistrez un échantillon de voix pour l’inscription biométrique',
+    faceLiveness: 'Détection de vivacité du visage',
+    faceLivenessSubtitle: 'Prenez un selfie pour la vérification de vivacité',
+    documentVerification: 'Vérification du document',
+    documentVerificationSubtitle: 'Téléchargez et vérifiez votre document d’identité',
+    nextSteps: 'Étapes suivantes',
+    completeProfileRegistration: 'Compléter l’enregistrement du profil',
+  },
   privacyScreen: {
     title: 'Paramètres de confidentialité',
     sections: {
@@ -278,6 +488,7 @@ export const fr = {
     fullNamePlaceholder: 'Entrez votre nom complet',
     phoneNumber: 'Numéro de téléphone',
     phoneNumberPlaceholder: 'Entrez votre numéro de téléphone',
+  phoneIncludeAreaCode: '(Inclure l’indicatif régional)',
     email: 'Email',
     emailPlaceholder: 'Entrez votre adresse email',
     emailOptionalTag: 'Facultatif',
@@ -290,6 +501,43 @@ export const fr = {
     validEmail: 'Veuillez entrer une adresse email valide',
     terms: 'En continuant, vous acceptez nos Conditions d\'utilisation et notre Politique de confidentialité',
     requiredNote: '* Champs obligatoires (email facultatif)',
+    dateRequired: 'La date de naissance est requise',
+    dateFormat: 'Veuillez entrer la date au format JJ/MM/AAAA',
+    pensionNumber: 'Numéro de pension',
+    pensionNumberPlaceholder: 'Entrez votre numéro de pension',
+    pensionRequired: 'Le numéro de pension est requis',
+    password: 'Mot de passe',
+    passwordPlaceholder: 'Créer un mot de passe',
+    passwordRequired: 'Le mot de passe est requis',
+    passwordMin: 'Le mot de passe doit contenir au moins 6 caractères',
+    personalInformation: 'Informations personnelles',
+    idDocumentType: 'Type de document d’identité',
+    idDocumentUpload: 'Téléchargement du document d’identité',
+    documentSelected: 'Document sélectionné',
+    tapToUploadId: 'Appuyez pour télécharger votre document d’identité',
+    supportedFormats: 'Formats pris en charge : JPG, PNG, PDF',
+    saveProfile: 'Enregistrer le profil',
+  },
+  verify: {
+    title: 'Vérification d’identité',
+    subtitle: 'Complétez toutes les étapes pour vérifier votre identité',
+    progress: 'Progression de la vérification',
+    overallStatus: 'Statut global',
+    allStepsCompleted: 'Toutes les étapes de vérification sont terminées !',
+    stepsCompletedOf: '{{count}} sur 3 étapes terminées',
+    instructions: 'Instructions',
+    bulletPoints: '• Effectuez les étapes dans l’ordre\n• Assurez un bon éclairage pour la vérification photo\n• Ayez votre document d’identité prêt\n• Parlez clairement pendant la vérification vocale\n• Toutes les vérifications sont sécurisées et chiffrées',
+    statuses: {
+      verified: 'Vérifié',
+      start: 'Démarrer la vérification',
+      inProgress: 'En cours',
+      notStarted: 'Non commencé'
+    },
+    signInRequired: 'Connexion requise',
+    pleaseSignIn: 'Veuillez vous connecter pour accéder aux fonctionnalités de vérification',
+    completeYourProfile: 'Complétez votre profil',
+    pleaseCompleteProfileFirst: 'Veuillez compléter votre profil avant de commencer la vérification',
+    goToProfile: 'Aller au profil'
   },
   voiceEnrollment: {
     title: 'Inscription vocale',
@@ -311,18 +559,197 @@ export const fr = {
       message: 'Nous avons besoin de votre consentement pour collecter et traiter vos données biométriques vocales à des fins de vérification d\'identité.',
       understand: 'Je comprends que ma voix sera traitée pour la vérification',
       agree: 'J\'accepte'
-    }
+    },
+    recording: 'Enregistrement...',
+    recordingComplete: 'Enregistrement terminé',
+    enrolledMessage: 'Votre voix a été enregistrée avec succès'
   },
-  // Add more French translations here...
   settings: {
     title: 'Paramètres',
     language: 'Langue',
-    changeLanguage: 'Changer de langue'
+    changeLanguage: 'Changer de langue',
+    selectLanguage: 'Sélectionnez votre langue préférée',
+    languageChangedTitle: 'Langue modifiée',
+    languageChangedMessage: 'Langue changée en {{name}}',
+    sections: {
+      account: 'Compte',
+      privacySecurity: 'Confidentialité et sécurité',
+      appSettings: "Paramètres de l'application",
+      support: 'Support',
+    },
+    items: {
+      profile: {
+        title: 'Profil',
+        subtitle: 'Gérez les informations de votre compte',
+      },
+      notifications: {
+        title: 'Notifications',
+        subtitle: 'Gérer les préférences de notification',
+      },
+      biometric: {
+        title: 'Verrouillage biométrique',
+        subtitle: 'Utiliser le visage/l’empreinte pour déverrouiller',
+      },
+      privacy: {
+        title: 'Paramètres de confidentialité',
+        subtitle: 'Gérez vos données et votre confidentialité',
+      },
+      darkMode: {
+        title: 'Mode sombre',
+        subtitle: 'Activer le thème sombre',
+      },
+      resetOnboarding: {
+        title: 
+          "Réinitialiser l'onboarding",
+        subtitle: "Revoir les écrans d'onboarding",
+      },
+      help: {
+        title: 'Aide et support',
+        subtitle: 'Obtenez de l’aide et contactez le support',
+        comingSoon: 'Aide et support bientôt disponibles',
+      },
+      about: {
+        title: 'À propos de Voice Biometrics',
+        subtitle: "Version de l'application et informations",
+        message: 'Version 1.0.0\n\nVérification d\'identité sécurisée et simple.\n\n© 2025 Voice Biometrics Inc.',
+      },
+    },
+    resetOnboarding: {
+      confirmTitle: "Réinitialiser l'onboarding",
+      confirmMessage: "Les écrans d'onboarding seront affichés au prochain lancement. Continuer ?",
+      resetAction: 'Réinitialiser',
+      successTitle: 'Succès',
+      successMessage: "Onboarding réinitialisé ! Fermez et rouvrez l'application pour le voir.",
+    },
+  },
+  profile: {
+    updated: 'Profil mis à jour avec succès',
+    title: 'Profil',
+    verifiedAccount: 'Compte vérifié',
+    pendingVerification: 'Vérification en attente',
+    accountInformation: 'Informations du compte',
+    fullName: 'Nom complet',
+    phoneNumber: 'Numéro de téléphone',
+    email: 'Email',
+    notProvided: 'Non fourni',
+    dateOfBirth: 'Date de naissance',
+    verificationStatus: 'Statut de vérification',
+    voiceVerification: 'Vérification vocale',
+    faceVerification: 'Vérification faciale',
+    documentVerification: 'Vérification du document',
+    adminReviewStatus: 'Statut d’examen admin',
+    adminApproval: 'Approbation admin',
+    approved: 'Approuvé',
+    pending: 'En attente',
+    paymentStatus: 'Statut de paiement',
+    released: 'Libéré',
+    signOut: 'Se déconnecter',
+    signOutConfirmTitle: 'Se déconnecter',
+    signOutConfirmMessage: 'Êtes-vous sûr de vouloir vous déconnecter ?',
+    cancel: 'Annuler'
+  },
+  voiceLogin: {
+    title: 'Vérification vocale',
+    subtitle: 'Vérifiez votre identité avec votre voix',
+    instructions: 'Veuillez dire la phrase suivante :',
+    loginScript: 'Ma voix est mon passeport. Vérifiez mon identité maintenant.',
+    startVerification: 'Démarrer la vérification',
+    verifying: 'Vérification de votre voix...',
+    verificationSuccess: 'Voix vérifiée avec succès !',
+    verificationFailed: 'Échec de la vérification vocale. Veuillez réessayer.',
+    attemptsLeft: 'Il reste {{attempts}} essais',
+    tapToStart: 'Appuyez pour démarrer la vérification',
+    tapToStop: 'Appuyez pour arrêter et vérifier',
+    maxAttemptsReached: 'Nombre maximal d’essais atteint',
+    matchScore: 'Score de correspondance : {{score}}%',
+    verifiedProceed: 'Votre identité a été vérifiée. Vous pouvez continuer.',
+    enrollNow: 'S’inscrire maintenant',
+    enrollmentRequiredTitle: 'Inscription vocale requise',
+    enrollmentRequiredMessage: 'Vous devez d’abord enregistrer votre voix avant de vérifier. Voulez-vous vous inscrire maintenant ?',
+    playRecording: 'Lire l’enregistrement',
+    playing: 'Lecture... ',
+    readyForVerification: 'Enregistrement prêt pour la vérification',
+    recordFirst: 'Veuillez d’abord enregistrer votre voix'
+  },
+  dashboard: {
+    pendingReviewMessage: "Votre vérification est en cours d’examen par notre équipe. Vous recevrez une notification lorsqu’elle sera terminée.",
+    rejectionReason: 'Raison du refus :',
+    quickActions: 'Actions rapides',
+    retryVerification: 'Réessayer la vérification',
+    accountInfo: 'Informations du compte',
+    labels: {
+      name: 'Nom :',
+      phone: 'Téléphone :',
+      email: 'Email :',
+      memberSince: 'Membre depuis :',
+    }
+  },
+  document: {
+    tipsTitle: 'Conseils pour de meilleurs résultats :',
+    noFileSelected: 'Veuillez capturer ou sélectionner un fichier de document',
+    fileTooLarge15: 'Le fichier doit être inférieur à 15 Mo'
+  },
+  liveness: {
+    preparingCamera: 'Préparation de la caméra…',
+    stepOf: 'Étape {{current}} sur {{total}}',
+    noSelfieCaptured: 'Nous n’avons pas pu capturer votre selfie. Veuillez vérifier les autorisations caméra, garder votre visage dans le cadre et réessayer.'
+  },
+  verificationSubmitted: {
+    title: 'Vérification envoyée',
+    subtitle: 'Vos documents ont été téléchargés avec succès et sont en cours d’examen par notre équipe.',
+    statusPending: 'Statut : En cours d’examen',
+    notify: 'Nous vous avertirons lorsque la vérification sera terminée. Cela prend généralement moins de 24 heures.',
+    tamperNotice: 'Un problème potentiel a été détecté avec l’image du document. Un agent a été notifié pour examiner cela.',
+    referenceId: 'Identifiant de référence : {{id}}',
+    viewStatus: 'Voir le statut de vérification',
+    goToDashboard: 'Aller au tableau de bord'
+  },
+  permissions: {
+    mediaLibrary: {
+      title: 'Autorisation de la photothèque requise',
+      message: 'Nous avons besoin d’un accès à votre photothèque pour sélectionner une image du document.'
+    },
+    camera: {
+      title: 'Autorisation de la caméra requise',
+      message: 'Nous avons besoin d’un accès à votre caméra pour prendre des photos de vos documents et pour la détection de vivacité.'
+    },
+    microphone: {
+      title: 'Autorisation du microphone requise',
+      message: 'Nous avons besoin d’un accès à votre microphone pour enregistrer votre voix pour la vérification.'
+    },
+    allowAccess: 'Autoriser l’accès',
+    openSettings: 'Ouvrir les réglages'
   }
 };
 
 // Somali translations
 export const so = {
+  auth: {
+    signIn: 'Soo gal',
+    login: 'Soo gal',
+    signInRequired: 'Soo galid ayaa loo baahan yahay',
+    pleaseSignIn: 'Fadlan soo gal si aad u sii wadato',
+    pleaseSignInToViewProfile: 'Waa inaad soo gashaa si aad u aragto profile-kaaga',
+    pleaseSignInToRegister: 'Waa inaad soo gashaa si aad u dhammaystirto diiwaangelinta profile-ka',
+  },
+  home: {
+    brandTitle: 'Ku soo dhowow INPS',
+    brandSubtitle: 'Nidaamka caymiska ee aad ku kalsoon tahay',
+    welcomeBack: 'Ku soo dhowow mar kale, {{name}}',
+    checkStatusBelow: 'Hoos ka eeg xaaladda xaqiijintaada',
+    verificationStatus: 'Xaaladda xaqiijinta',
+    continueVerification: 'Sii wad geeddi-socodka xaqiijinta',
+    noSession: 'Ma jiraan kalfadhi xaqiijin ah. Ka bilow diiwaangelinta profile-kaaga.',
+    verificationSteps: 'Tallaabooyinka xaqiijinta',
+    voiceVerification: 'Xaqiijinta codka',
+    voiceVerificationSubtitle: 'Ku duub cod muunad si loo diiwaangeliyo',
+    faceLiveness: 'Ogaanshaha noolida wejiga',
+    faceLivenessSubtitle: 'Qaado sawir-selfie si loo xaqiijiyo noolida',
+    documentVerification: 'Xaqiijinta dukumentiga',
+    documentVerificationSubtitle: 'Ku rar oo xaqiiji dukumentiga aqoonsigaaga',
+    nextSteps: 'Tallaabooyinka xiga',
+    completeProfileRegistration: 'Dhammaystir diiwaangelinta profile-ka',
+  },
   common: {
     continue: 'Sii wad',
     back: 'Dib u noqo',
@@ -356,6 +783,7 @@ export const so = {
     fullNamePlaceholder: 'Gali magacaaga oo dhan',
     phoneNumber: 'Nambarka taleefanka',
     phoneNumberPlaceholder: 'Gali nambarka taleefanka',
+  phoneIncludeAreaCode: '(Ku dar lambarka koodhka gobolka)',
     email: 'Email',
     emailPlaceholder: 'Gali email-kaaga',
     emailOptionalTag: 'Ikhtiyaari ah',
@@ -367,11 +795,177 @@ export const so = {
     validPhone: 'Fadlan geli nambar talefon sax ah',
     validEmail: 'Fadlan geli email sax ah',
     requiredNote: '* Goobaha qasab ah (email ikhtiyaari ah)',
+    dateRequired: 'Taariikhda dhalashada waa loo baahan yahay',
+    dateFormat: 'Fadlan geli taariikhda qaabka DD/MM/YYYY',
+    pensionNumber: 'Lambarka Pension-ka',
+    pensionNumberPlaceholder: 'Geli lambarka pension-kaaga',
+    pensionRequired: 'Lambarka pension-ka waa loo baahan yahay',
+    password: 'Erayga sirta',
+    passwordPlaceholder: 'Samee eray sir ah',
+    passwordRequired: 'Erayga sirta waa loo baahan yahay',
+    passwordMin: 'Erayga sirta waa inuu ka kooban yahay ugu yaraan 6 xaraf',
+    personalInformation: 'Macluumaadka shaqsiga',
+    idDocumentType: 'Nooca dukumentiga aqoonsiga',
+    idDocumentUpload: 'Soo rarista dukumentiga aqoonsiga',
+    documentSelected: 'Dukumenti la doortay',
+    tapToUploadId: 'Taabo si aad u soo geliso dukumentiga aqoonsiga',
+    supportedFormats: 'Qaabab la taageeray: JPG, PNG, PDF',
+    saveProfile: 'Kaydi profile-ka',
+  },
+  verify: {
+    title: 'Xaqiijinta Aqoonsiga',
+    subtitle: 'Dhammaystir dhammaan tallaabooyinka si aad u xaqiijiso aqoonsigaaga',
+    progress: 'Horumarka Xaqiijinta',
+    overallStatus: 'Xaaladda guud',
+    allStepsCompleted: 'Dhammaan tallaabooyinka xaqiijinta waa la dhammaystiray!',
+    stepsCompletedOf: '{{count}} ka mid ah 3 tallaabo ayaa dhammaystiran',
+    instructions: 'Tilmaamo',
+    bulletPoints: '• Dhamee tallaabooyinka isku xiga\n• Ka dhig iftiin fiican markaad sawir qaadaysid\n• Dukumentiga aqoonsigaaga ha kuu diyaar ahaado\n• Si cad u hadal inta lagu jiro xaqiijinta codka\n• Dhammaan xaqiijintu waa ammaan oo siraysan',
+    statuses: {
+      verified: 'La xaqiijiyay',
+      start: 'Bilow xaqiijinta',
+      inProgress: 'Socota',
+      notStarted: 'Lama bilaabin'
+    },
+    signInRequired: 'Soo galid ayaa loo baahan yahay',
+    pleaseSignIn: 'Fadlan soo gal si aad u gasho astaamaha xaqiijinta',
+    completeYourProfile: 'Dhammaystir profile-kaaga',
+    pleaseCompleteProfileFirst: 'Fadlan dhammaystir profile-ka ka hor inta aadan bilaabin xaqiijinta',
+    goToProfile: 'Tag Profile-ka'
   },
   settings: {
     title: 'Dejinta',
     language: 'Luqad',
-    changeLanguage: 'Beddel luqadda'
+    changeLanguage: 'Beddel luqadda',
+    selectLanguage: 'Dooro luqadda aad door bidayso',
+    languageChangedTitle: 'Luqad la beddelay',
+    languageChangedMessage: 'Luqadda waxaa loo beddelay {{name}}',
+    sections: {
+      account: 'Akoon',
+      privacySecurity: 'Asturnaanta & Amniga',
+      appSettings: 'Dejinta App-ka',
+      support: 'Taageero',
+    },
+    items: {
+      profile: {
+        title: 'Xogta shaqsiga',
+        subtitle: 'Maamul macluumaadka akoonkaaga',
+      },
+      notifications: {
+        title: 'Ogeysiisyada',
+        subtitle: 'Maamul doorbidyada ogeysiisyada',
+      },
+      biometric: {
+        title: 'Qufulka Biometric',
+        subtitle: 'Isticmaal wajiga/faraha si aad u furto',
+      },
+      privacy: {
+        title: 'Dejinta Asturnaanta',
+        subtitle: 'Maamul xogtaada iyo asturnaanta',
+      },
+      darkMode: {
+        title: 'Habka Madow',
+        subtitle: 'Beddel mawduuca madow',
+      },
+      resetOnboarding: {
+        title: 'Dib u daawo Onboarding',
+        subtitle: 'Mar kale eeg shaashadaha soo dhaweynta',
+      },
+      help: {
+        title: 'Caawin & Taageero',
+        subtitle: 'Hel caawimaad oo la xiriir taageerada',
+        comingSoon: 'Caawin & Taageero dhawaan',
+      },
+      about: {
+        title: 'Ku saabsan Voice Biometrics',
+        subtitle: 'Macluumaadka iyo nooca app-ka',
+        message: 'Nooca 1.0.0\n\nXaqiijin aqoonsi oo ammaan ah oo fudud.\n\n© 2025 Voice Biometrics Inc.',
+      },
+    },
+    resetOnboarding: {
+      confirmTitle: 'Dib u dajinta Onboarding',
+      confirmMessage: 'Tani waxay soo bandhigi doontaa shaashadaha soo dhaweynta marka xigta ee aad furto app-ka. Ma doonaysaa in aad sii waddo?',
+      resetAction: 'Dib u deji',
+      successTitle: 'Guul',
+      successMessage: 'Onboarding waa la dejiyay! Xir oo fur app-ka si aad u aragto.',
+    },
+  },
+  voiceLogin: {
+    title: 'Xaqiijinta codka',
+    subtitle: 'Ku xaqiiji aqoonsigaaga codkaaga',
+    instructions: 'Fadlan ku dheh weedhan soo socota:',
+    loginScript: 'Codkaygu waa furaha. Hadda xaqiiji aqoonsigayga.',
+    startVerification: 'Bilow xaqiijinta',
+    verifying: 'Codkaaga ayaa la xaqiijinayaa...',
+    verificationSuccess: 'Cod si guul ah ayaa loo xaqiijiyay!',
+    verificationFailed: 'Xaqiijinta codka waa ku guuldareysatay. Fadlan mar kale isku day.',
+    attemptsLeft: '{{attempts}} isku day ayaa haray',
+    tapToStart: 'Taabo si aad u bilowdo xaqiijinta',
+    tapToStop: 'Taabo si aad u joojiso oo u xaqiijiso',
+    maxAttemptsReached: 'Tirada isku dayga ugu badan waa la gaaray',
+    matchScore: 'Heerka iswaafajinta: {{score}}%',
+    verifiedProceed: 'Aqoonsigaaga waa la xaqiijiyay. Waxaadan sii wadi kartaa.',
+    enrollNow: 'Diiwaangeli hadda',
+    enrollmentRequiredTitle: 'Diiwaangelinta codka waa loo baahan yahay',
+    enrollmentRequiredMessage: 'Waa inaad marka hore diiwaangelisaa codkaaga ka hor intaan la xaqiijin. Ma rabtaa inaad hadda bilowdo?',
+    playRecording: 'Ciyaar duubista',
+    playing: 'Ciyaaraya...',
+    readyForVerification: 'Duubistu diyaar bay u tahay xaqiijin',
+    recordFirst: 'Fadlan marka hore codkaaga duub'
+  },
+  dashboard: {
+    pendingReviewMessage: 'Xaqiijintaada waxa ay ku jirtaa dib u eegis. Waxaad heli doontaa ogeysiis marka ay dhammaato.',
+    rejectionReason: 'Sababta diidmada:',
+    quickActions: 'Tallaabooyin degdeg ah',
+    retryVerification: 'Dib u bilow xaqiijinta',
+    accountInfo: 'Macluumaadka Akoonka',
+    labels: {
+      name: 'Magac:',
+      phone: 'Taleefan:',
+      email: 'Email:',
+      memberSince: 'Xubin tan iyo:',
+    }
+  },
+  document: {
+    tipsTitle: 'Talooyin natiijo fiican:',
+    noFileSelected: 'Fadlan sawir ka qaad ama dooro fayl dukumenti',
+    fileTooLarge15: 'Faylka waa inuu ka yar yahay 15MB'
+  },
+  liveness: {
+    preparingCamera: 'Kamarad ayaa la diyaarinayaa…',
+    stepOf: 'Tallaabo {{current}} ka mid ah {{total}}',
+    noSelfieCaptured: 'Ma awoodin inaan qabanno sawirkaaga. Fadlan xaqiiji oggolaanshaha kamaradda, ku hay wejigaaga qaabka, oo mar kale isku day.'
+  },
+  voiceEnrollment: {
+    recording: 'Duubis...',
+    recordingComplete: 'Duubistu way dhammaatay',
+    enrolledMessage: 'Codkaaga si guul leh ayaa loo diiwaan geliyay'
+  },
+  verificationSubmitted: {
+    title: 'Xaqiijinta waa la gudbiyay',
+    subtitle: 'Dukumentiyadaada si guul leh ayaa loo soo gudbiyay waxaana lagu jiraa dib u eegis.',
+    statusPending: 'Xaalad: Dib u eegis socota',
+    notify: 'Waxaan ku wargelin doonaa marka xaqiijintu dhammaato. Tani badanaa ka yar 24 saacadood ayay qaadataa.',
+    tamperNotice: 'Waxaan ogaanay arrin suurtagal ah oo sawirka dukumentiga ah. Shaqaale ayaa loo soo wargeliyay inuu si dhow u eego.',
+    referenceId: 'Lambarka Tixraaca: {{id}}',
+    viewStatus: 'Eeg xaaladda xaqiijinta',
+    goToDashboard: 'Tag Dashboard-ka'
+  },
+  permissions: {
+    mediaLibrary: {
+      title: 'Oggolaanshaha Maktabadda Sawirrada ayaa loo baahan yahay',
+      message: 'Waxaan u baahannahay marin si aan uga dooranno sawirka dukumentiga.'
+    },
+    camera: {
+      title: 'Oggolaanshaha Kamaradda ayaa loo baahan yahay',
+      message: 'Waxaan u baahanahay marin kamaradda si aan sawir uga qaadno dukumentiyadaada iyo baaritaanka liveness-ka.'
+    },
+    microphone: {
+      title: 'Oggolaanshaha Makarafoonka ayaa loo baahan yahay',
+      message: 'Waxaan u baahanahay marin makarafoonka si aan u duubno codkaaga si loo xaqiijiyo.'
+    },
+    allowAccess: 'U oggolow gelitaanka',
+    openSettings: 'Fur Dejinta'
   }
 };
 

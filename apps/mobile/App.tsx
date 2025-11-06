@@ -9,6 +9,8 @@ import { Toaster } from 'sonner-native';
 import { AlertModal } from './polyfills/web/alerts.web';
 import './global.css';
 import clearLocalData from './src/utils/maintenance/clearLocalData';
+import { useEffect as useEffect2 } from 'react';
+import { useLanguageStore } from '@/i18n/useTranslation';
 
 const GlobalErrorReporter = () => {
   useEffect(() => {
@@ -83,6 +85,14 @@ const CreateApp = () => {
   const router = useRouter();
   const pathname = usePathname();
   useHandshakeParent();
+
+  // Initialize saved language preference early so screens render in the right locale
+  useEffect2(() => {
+    try {
+      const init = useLanguageStore.getState().initializeLanguage;
+      if (typeof init === 'function') init();
+    } catch {}
+  }, []);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {

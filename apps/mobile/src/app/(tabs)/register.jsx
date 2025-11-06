@@ -11,11 +11,13 @@ import * as FileSystem from 'expo-file-system';
 import KeyboardAvoidingAnimatedView from '@/components/KeyboardAvoidingAnimatedView';
 import { apiFetch, apiFetchJson } from '@/utils/api';
 import DateInput from '@/components/DateInput';
+import { useTranslation } from '@/i18n/useTranslation';
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const { isAuthenticated, signIn } = useAuth();
   const { data: authUser } = useUser();
+  const { t } = useTranslation();
   
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -29,9 +31,9 @@ export default function RegisterScreen() {
   const [selectedDocument, setSelectedDocument] = useState(null);
   
   const documentTypes = [
-    { value: 'national_id', label: 'CNIC' },
-    { value: 'passport', label: 'Passport' },
-    { value: 'drivers_license', label: 'License' },
+    { value: 'national_id', label: t('document.documentTypes.national_id') },
+    { value: 'passport', label: t('document.documentTypes.passport') },
+    { value: 'drivers_license', label: t('document.documentTypes.drivers_license') },
   ];
 
   useEffect(() => {
@@ -66,23 +68,23 @@ export default function RegisterScreen() {
 
   const handleDocumentPicker = () => {
     Alert.alert(
-      'Select Document',
-      'Choose how you want to upload your ID document',
+      t('document.title'),
+      t('document.subtitle'),
       [
         {
-          text: 'Camera',
+          text: t('document.takePhoto'),
           onPress: openCamera,
         },
         {
-          text: 'Gallery',
+          text: t('document.selectFromLibrary'),
           onPress: openGallery,
         },
         {
-          text: 'Files',
+          text: t('document.browseFiles'),
           onPress: openDocumentPicker,
         },
         {
-          text: 'Cancel',
+          text: t('common.cancel'),
           style: 'cancel',
         },
       ]
@@ -92,7 +94,7 @@ export default function RegisterScreen() {
   const openCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Camera permission is required to take photos');
+      Alert.alert(t('permissions.camera.title'), t('permissions.camera.message'));
       return;
     }
 
@@ -115,7 +117,7 @@ export default function RegisterScreen() {
   const openGallery = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Gallery permission is required to select photos');
+      Alert.alert(t('permissions.mediaLibrary.title'), t('permissions.mediaLibrary.message'));
       return;
     }
 
@@ -150,13 +152,21 @@ export default function RegisterScreen() {
         });
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick document');
+      Alert.alert(t('common.error'), t('document.uploadFailed'));
     }
   };
 
   const handleSave = async () => {
-    if (!fullName.trim() || !mobileNumber.trim() || !dateOfBirth.trim()) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    if (!fullName.trim()) {
+      Alert.alert(t('common.error'), t('registration.nameRequired'));
+      return;
+    }
+    if (!mobileNumber.trim()) {
+      Alert.alert(t('common.error'), t('registration.phoneRequired'));
+      return;
+    }
+    if (!dateOfBirth.trim()) {
+      Alert.alert(t('common.error'), t('registration.dateRequired'));
       return;
     }
 
@@ -169,7 +179,7 @@ export default function RegisterScreen() {
     // Validate date format (DD/MM/YYYY)
     const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
     if (!dateRegex.test(dateOfBirth)) {
-      Alert.alert('Error', 'Please enter date in DD/MM/YYYY format');
+      Alert.alert(t('common.error'), t('registration.dateFormat'));
       return;
     }
 
@@ -179,7 +189,7 @@ export default function RegisterScreen() {
       const dob = new Date(y, m - 1, d);
       const today = new Date();
       if (isFinite(dob.getTime()) && dob > today) {
-        Alert.alert('Invalid Date of Birth', 'Date of birth cannot be in the future.');
+        Alert.alert(t('common.error'), t('registration.dateFormat'));
         return;
       }
     } catch {}
@@ -210,46 +220,27 @@ export default function RegisterScreen() {
         setProfile(result.user);
         
         // Upload document if selected
-        let documentUploadSuccess = true;
         if (selectedDocument) {
           try {
             await uploadDocument();
+            Alert.alert(t('common.success'), t('profile.updated'), [
+              { text: t('common.ok') }
+            ]);
           } catch (docError) {
             console.error('Document upload failed:', docError);
-            documentUploadSuccess = false;
+            Alert.alert(t('common.error'), t('document.uploadFailed'));
           }
+        } else {
+          Alert.alert(t('common.success'), t('profile.updated'), [
+            { text: t('common.ok') }
+          ]);
         }
-        
-        // Show appropriate success message
-        const message = documentUploadSuccess 
-          ? 'Profile updated successfully!' 
-          : 'Profile updated, but document upload failed. Please try uploading again.';
-        
-        Alert.alert(
-          'Success',
-          message,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                // Navigate to verify tab or home
-              },
-            },
-          ]
-        );
       } else {
-        Alert.alert('Error', result.error || 'Failed to update profile');
+        Alert.alert(t('common.error'), result.error || t('errors.server'));
       }
     } catch (error) {
       console.error('Error saving profile:', error);
-      const message =
-        // @ts-ignore
-        (error?.data?.error?.message || error?.message || 'Network error. Please try again.');
-      // Provide more helpful guidance for connectivity issues
-      const details = (/Network request failed/i.test(message)
-        ? '\n\nTips:\n• Ensure your phone and server are on the same Wi‑Fi network\n• Verify EXPO_PUBLIC_API_URL points to your server (e.g., http://<LAN-IP>:4000)\n• Confirm the server is running and reachable from the device browser'
-        : '');
-      Alert.alert('Error', `${message}${details}`);
+      Alert.alert(t('common.error'), t('errors.network'));
     } finally {
       setSaving(false);
     }
@@ -262,7 +253,7 @@ export default function RegisterScreen() {
       
       // Validate document type is set
       if (!idDocumentType || idDocumentType.trim() === '') {
-        throw new Error('Document type must be selected before uploading');
+        throw new Error('document_type_required');
       }
       
       // Read the file as base64 using expo-file-system
@@ -302,14 +293,14 @@ export default function RegisterScreen() {
       <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
         <StatusBar style="dark" />
         
-        <Text style={styles.title}>Please Sign In</Text>
-        <Text style={styles.subtitle}>You need to sign in to complete profile registration</Text>
+        <Text style={styles.title}>{t('auth.signInRequired')}</Text>
+        <Text style={styles.subtitle}>{t('auth.pleaseSignInToRegister')}</Text>
         
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={() => signIn()}
         >
-          <Text style={styles.primaryButtonText}>Sign In</Text>
+          <Text style={styles.primaryButtonText}>{t('auth.signIn')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -320,7 +311,7 @@ export default function RegisterScreen() {
       <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
         <StatusBar style="dark" />
         <ActivityIndicator size="large" color="#3B82F6" />
-        <Text style={styles.loadingText}>Loading profile...</Text>
+        <Text style={styles.loadingText}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -332,8 +323,8 @@ export default function RegisterScreen() {
         
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile Registration</Text>
-          <Text style={styles.headerSubtitle}>Complete your profile to begin verification</Text>
+          <Text style={styles.headerTitle}>{t('home.completeProfileRegistration')}</Text>
+          <Text style={styles.headerSubtitle}>{t('verify.subtitle')}</Text>
         </View>
 
         <ScrollView
@@ -344,17 +335,17 @@ export default function RegisterScreen() {
         >
           {/* Personal Information Card */}
           <View style={styles.infoCard}>
-            <Text style={styles.cardTitle}>Personal Information</Text>
+            <Text style={styles.cardTitle}>{t('registration.personalInformation')}</Text>
             
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Full Name</Text>
+              <Text style={styles.label}>{t('registration.fullName')}</Text>
               <View style={styles.inputContainer}>
                 <User size={18} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   value={fullName}
                   onChangeText={setFullName}
-                  placeholder={profile?.name || 'Fasih'}
+                  placeholder={profile?.name || t('registration.fullNamePlaceholder')}
                   placeholderTextColor="#9CA3AF"
                   autoCapitalize="words"
                 />
@@ -362,14 +353,14 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Mobile Number *</Text>
+              <Text style={styles.label}>{t('registration.phoneNumber')} *</Text>
               <View style={styles.inputContainer}>
                 <Phone size={18} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   value={mobileNumber}
                   onChangeText={setMobileNumber}
-                  placeholder="Enter your mobile number"
+                  placeholder={t('registration.phoneNumberPlaceholder')}
                   keyboardType="phone-pad"
                   placeholderTextColor="#9CA3AF"
                 />
@@ -377,7 +368,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Date of Birth *</Text>
+              <Text style={styles.label}>{t('registration.dateOfBirth')} *</Text>
               <View style={styles.inputContainer}>
                 <Calendar size={18} color="#9CA3AF" style={styles.inputIcon} />
                 <DateInput value={dateOfBirth} onChangeText={setDateOfBirth} />
@@ -385,7 +376,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>ID Document Type</Text>
+              <Text style={styles.label}>{t('registration.idDocumentType')}</Text>
               <View style={styles.documentTypeRow}>
                 {documentTypes.map((type) => (
                   <TouchableOpacity
@@ -410,7 +401,7 @@ export default function RegisterScreen() {
 
           {/* Document Upload Card */}
           <View style={styles.uploadCard}>
-            <Text style={styles.cardTitle}>ID Document Upload</Text>
+            <Text style={styles.cardTitle}>{t('registration.idDocumentUpload')}</Text>
             
             <TouchableOpacity
               style={styles.uploadArea}
@@ -419,15 +410,15 @@ export default function RegisterScreen() {
               {selectedDocument ? (
                 <View style={styles.uploadedDocument}>
                   <CheckCircle size={24} color="#10B981" />
-                  <Text style={styles.uploadedText}>Document Selected</Text>
+                  <Text style={styles.uploadedText}>{t('registration.documentSelected')}</Text>
                   <Text style={styles.fileName}>{selectedDocument.name}</Text>
                 </View>
               ) : (
                 <View style={styles.uploadPrompt}>
                   <Upload size={32} color="#9CA3AF" />
-                  <Text style={styles.uploadText}>Tap to upload your ID document</Text>
+                  <Text style={styles.uploadText}>{t('registration.tapToUploadId')}</Text>
                   <Text style={styles.uploadSubtext}>
-                    Supported formats: JPG, PNG, PDF
+                    {t('registration.supportedFormats')}
                   </Text>
                 </View>
               )}
@@ -445,7 +436,7 @@ export default function RegisterScreen() {
             {saving ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.saveButtonText}>Save Profile</Text>
+              <Text style={styles.saveButtonText}>{t('registration.saveProfile')}</Text>
             )}
           </TouchableOpacity>
         </View>

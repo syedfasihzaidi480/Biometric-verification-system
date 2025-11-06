@@ -40,29 +40,16 @@ export default function VoiceVerificationScreen() {
   const durationInterval = useRef(null);
   const pulseAnimation = useRef(new Animated.Value(1)).current;
 
-  // Generate a simple verification phrase that's easy to repeat
-  const getVerificationPhrase = () => {
-    const phrases = [
-      'My voice is my password',
-      'I verify my identity with my voice',
-      'This is my voice verification',
-      'I am who I say I am',
-      'My voice confirms my identity'
-    ];
-    
-    const randomIndex = Math.floor(Math.random() * phrases.length);
-    return phrases[randomIndex];
-  };
-
-  const [verificationPhrase] = useState(getVerificationPhrase());
+  // Use a localized verification phrase
+  const verificationPhrase = t('voiceLogin.loginScript');
 
   useEffect(() => {
     // Check if userId is available
     if (!userId) {
       Alert.alert(
-        'Error',
-        'User information not found. Please sign in again.',
-        [{ text: 'OK', onPress: () => router.back() }]
+        t('common.error'),
+        t('errors.userNotFound'),
+        [{ text: t('common.ok'), onPress: () => router.back() }]
       );
       return;
     }
@@ -90,12 +77,12 @@ export default function VoiceVerificationScreen() {
       
       if (!result.success || !result.data?.isEnrolled) {
         Alert.alert(
-          'Voice Enrollment Required',
-          'You need to enroll your voice before you can verify. Would you like to enroll now?',
+          t('voiceLogin.enrollmentRequiredTitle'),
+          t('voiceLogin.enrollmentRequiredMessage'),
           [
-            { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
+            { text: t('common.cancel'), style: 'cancel', onPress: () => router.back() },
             { 
-              text: 'Enroll Now', 
+              text: t('voiceLogin.enrollNow'), 
               onPress: () => router.replace({
                 pathname: '/voice-enrollment',
                 params: { 
@@ -261,17 +248,17 @@ export default function VoiceVerificationScreen() {
         } else {
           if (attempts >= maxAttempts) {
             Alert.alert(
-              'Verification Failed',
-              'Maximum attempts reached. Please try again later or contact support.',
+              t('voiceLogin.verificationFailed'),
+              t('voiceLogin.maxAttemptsReached'),
               [
-                { text: 'OK', onPress: () => router.back() }
+                { text: t('common.ok'), onPress: () => router.back() }
               ]
             );
           } else {
             Alert.alert(
-              'Voice Not Recognized',
-              `Voice verification failed. Please try again. ${maxAttempts - attempts} attempts remaining.`,
-              [{ text: 'Try Again' }]
+              t('voiceLogin.verificationFailed'),
+              t('voiceLogin.attemptsLeft', { attempts: maxAttempts - attempts }),
+              [{ text: t('common.retry') }]
             );
           }
         }
@@ -279,12 +266,12 @@ export default function VoiceVerificationScreen() {
         // Check if the error is because voice enrollment is not complete
         if (result.error?.code === 'VOICE_NOT_ENROLLED') {
           Alert.alert(
-            'Voice Enrollment Required',
-            'You need to enroll your voice before you can verify. Would you like to enroll now?',
+            t('voiceLogin.enrollmentRequiredTitle'),
+            t('voiceLogin.enrollmentRequiredMessage'),
             [
-              { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
+              { text: t('common.cancel'), style: 'cancel', onPress: () => router.back() },
               { 
-                text: 'Enroll Now', 
+                text: t('voiceLogin.enrollNow'), 
                 onPress: () => router.push({
                   pathname: '/voice-enrollment',
                   params: { 
@@ -300,7 +287,7 @@ export default function VoiceVerificationScreen() {
         } else {
           Alert.alert(
             t('common.error'), 
-            result.error?.message || 'Verification failed. Please try again.'
+            result.error?.message || t('voiceLogin.verificationFailed')
           );
         }
       }
@@ -355,9 +342,7 @@ export default function VoiceVerificationScreen() {
         >
           <ArrowLeft size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          Voice Verification
-        </Text>
+        <Text style={styles.headerTitle}>{t('voiceLogin.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -373,15 +358,9 @@ export default function VoiceVerificationScreen() {
               <View style={styles.iconContainer}>
                 <Volume2 size={48} color="#007AFF" />
               </View>
-              <Text style={styles.title}>
-                Voice ID Verification
-              </Text>
-              <Text style={styles.subtitle}>
-                Confirm your identity by speaking
-              </Text>
-              <Text style={styles.instructions}>
-                Please read the following phrase clearly and naturally:
-              </Text>
+              <Text style={styles.title}>{t('voiceLogin.title')}</Text>
+              <Text style={styles.subtitle}>{t('voiceLogin.subtitle')}</Text>
+              <Text style={styles.instructions}>{t('voiceLogin.instructions')}</Text>
             </View>
 
             {/* Verification Phrase */}
@@ -395,7 +374,7 @@ export default function VoiceVerificationScreen() {
             {attempts > 0 && attempts < maxAttempts && (
               <View style={styles.attemptsContainer}>
                 <Text style={styles.attemptsText}>
-                  {maxAttempts - attempts} attempts remaining
+                  {t('voiceLogin.attemptsLeft', { attempts: maxAttempts - attempts })}
                 </Text>
               </View>
             )}
@@ -435,14 +414,13 @@ export default function VoiceVerificationScreen() {
 
               {/* Control Text */}
               <Text style={styles.recordText}>
-                {isProcessing 
-                  ? 'Verifying your voice...'
-                  : isRecording 
-                    ? 'Tap to stop and verify'
-                    : attempts >= maxAttempts
-                      ? 'Maximum attempts reached'
-                      : 'Tap to start verification'
-                }
+                {isProcessing
+                  ? t('voiceLogin.verifying')
+                  : isRecording
+                  ? t('voiceLogin.tapToStop')
+                  : attempts >= maxAttempts
+                  ? t('voiceLogin.maxAttemptsReached')
+                  : t('voiceLogin.tapToStart')}
               </Text>
 
               {/* Retry Button */}
@@ -452,9 +430,7 @@ export default function VoiceVerificationScreen() {
                   onPress={retryVerification}
                 >
                   <RotateCcw size={20} color="#007AFF" />
-                  <Text style={styles.retryText}>
-                    Record Again
-                  </Text>
+                  <Text style={styles.retryText}>{t('voiceEnrollment.recordAgain')}</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -466,27 +442,21 @@ export default function VoiceVerificationScreen() {
               <CheckCircle size={64} color="#10B981" />
             </View>
             
-            <Text style={styles.completedTitle}>
-              Voice Verified Successfully!
-            </Text>
+            <Text style={styles.completedTitle}>{t('voiceLogin.verificationSuccess')}</Text>
             
             {matchScore && (
               <Text style={styles.matchScoreText}>
-                Match Score: {Math.round(matchScore * 100)}%
+                {t('voiceLogin.matchScore', { score: Math.round(matchScore * 100) })}
               </Text>
             )}
             
-            <Text style={styles.verifiedText}>
-              Your identity has been verified. You can now proceed.
-            </Text>
+            <Text style={styles.verifiedText}>{t('voiceLogin.verifiedProceed')}</Text>
             
             <TouchableOpacity
               style={styles.continueButton}
               onPress={handleContinue}
             >
-              <Text style={styles.continueButtonText}>
-                Continue
-              </Text>
+              <Text style={styles.continueButtonText}>{t('common.continue')}</Text>
             </TouchableOpacity>
           </View>
         )}
