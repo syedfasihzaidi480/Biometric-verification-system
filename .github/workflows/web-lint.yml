@@ -1,0 +1,31 @@
+name: Web Lint
+
+on:
+  push:
+    paths:
+      - 'apps/web/**'
+  pull_request:
+    paths:
+      - 'apps/web/**'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (web)
+        working-directory: apps/web
+        run: |
+          npm ci
+
+      - name: Route lint (duplicates)
+        working-directory: apps/web
+        run: |
+          npm run lint:routes

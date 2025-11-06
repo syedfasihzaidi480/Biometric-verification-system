@@ -1,5 +1,31 @@
 // English translations
 export const en = {
+  privacyScreen: {
+    title: 'Privacy Settings',
+    sections: {
+      dataPreferences: 'Data Preferences',
+      yourData: 'Your Data'
+    },
+    analytics: 'Analytics',
+    analyticsSubtitle: 'Help us improve by sharing anonymous usage stats',
+    personalized: 'Personalized Experience',
+    personalizedSubtitle: 'Use your activity to personalize content',
+    downloadData: 'Download My Data',
+    requestDeletion: 'Request Account Deletion',
+    viewPolicy: 'View Privacy Policy',
+    deleteAccount: 'Delete Account',
+    deleteConfirm: 'This will permanently delete your account data. This action cannot be undone.',
+    cancel: 'Cancel',
+    delete: 'Delete',
+    requestSubmitted: 'Request Submitted',
+    requestSubmittedMessage: 'If supported, your account will be deleted shortly.',
+    unsupported: 'Unsupported',
+    unsupportedMessage: 'Server does not support deletion. Please contact support.',
+    dataExported: 'Data Exported',
+    dataExportedMessage: 'Profile data saved to cache: {{path}}',
+    exportFailed: 'Export Failed',
+    exportFailedMessage: 'Could not export your data'
+  },
   common: {
     continue: 'Continue',
     back: 'Back',
@@ -193,6 +219,32 @@ export const en = {
 
 // French translations
 export const fr = {
+  privacyScreen: {
+    title: 'Paramètres de confidentialité',
+    sections: {
+      dataPreferences: 'Préférences de données',
+      yourData: 'Vos données'
+    },
+    analytics: 'Analytique',
+    analyticsSubtitle: 'Aidez-nous à améliorer en partageant des statistiques anonymes',
+    personalized: 'Expérience personnalisée',
+    personalizedSubtitle: 'Utiliser votre activité pour personnaliser le contenu',
+    downloadData: 'Télécharger mes données',
+    requestDeletion: 'Demander la suppression du compte',
+    viewPolicy: 'Voir la politique de confidentialité',
+    deleteAccount: 'Supprimer le compte',
+    deleteConfirm: 'Cela supprimera définitivement les données de votre compte. Cette action est irréversible.',
+    cancel: 'Annuler',
+    delete: 'Supprimer',
+    requestSubmitted: 'Demande envoyée',
+    requestSubmittedMessage: 'Si pris en charge, votre compte sera supprimé prochainement.',
+    unsupported: 'Non pris en charge',
+    unsupportedMessage: 'Le serveur ne prend pas en charge la suppression. Veuillez contacter le support.',
+    dataExported: 'Données exportées',
+    dataExportedMessage: 'Données de profil enregistrées dans le cache : {{path}}',
+    exportFailed: 'Échec de l’export',
+    exportFailedMessage: 'Impossible d’exporter vos données'
+  },
   common: {
     continue: 'Continuer',
     back: 'Retour',

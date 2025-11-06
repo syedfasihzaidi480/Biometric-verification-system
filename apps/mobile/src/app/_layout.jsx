@@ -1,4 +1,6 @@
 import { useAuth } from "@/utils/auth/useAuth";
+import * as SecureStore from 'expo-secure-store';
+import { authKey } from '@/utils/auth/store';
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
@@ -29,42 +31,37 @@ export default function RootLayout() {
   const [checkingLock, setCheckingLock] = useState(true);
 
   useEffect(() => {
-    initiate();
-  }, [initiate]);
-
-  useEffect(() => {
     (async () => {
-      if (!isReady) return;
       try {
         const prefs = await loadPreferences();
-        if (prefs.biometricLock) {
-          const hasHardware = await LocalAuthentication.hasHardwareAsync();
-          const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-          if (hasHardware && isEnrolled) {
-            const res = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock' });
-            setNeedsUnlock(!res.success);
-          } else {
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        const storedAuth = await SecureStore.getItemAsync(authKey);
+
+        // If biometric lock is enabled AND we have auth to unlock, gate on biometrics first
+        if (prefs.biometricLock && hasHardware && isEnrolled && storedAuth) {
+          const res = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock with Biometrics' });
+          if (res.success) {
+            await initiate();
             setNeedsUnlock(false);
+          } else {
+            setNeedsUnlock(true);
           }
         } else {
+          // No lock or no enrolled biometrics or no saved session -> just initialize auth normally
+          await initiate();
           setNeedsUnlock(false);
         }
       } catch (e) {
+        // On any error, continue without lock
+        await initiate();
         setNeedsUnlock(false);
       } finally {
         setCheckingLock(false);
         SplashScreen.hideAsync();
       }
     })();
-  }, [isReady]);
-
-  if (!isReady) {
-    return null;
-  }
-
-  if (checkingLock) {
-    return null;
-  }
+  }, [initiate]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -77,8 +74,12 @@ export default function RootLayout() {
               <TouchableOpacity
                 style={{ backgroundColor: '#007AFF', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 }}
                 onPress={async () => {
-                  const res = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock' });
-                  if (res.success) setNeedsUnlock(false);
+                  const res = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock with Biometrics' });
+                  if (res.success) {
+                    setNeedsUnlock(false);
+                    // Load stored session into auth store so user is "signed in" immediately
+                    await initiate();
+                  }
                 }}
               >
                 <Text style={{ color: 'white', fontWeight: '600' }}>Unlock</Text>

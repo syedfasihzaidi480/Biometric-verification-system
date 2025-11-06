@@ -4,9 +4,11 @@ import React, { memo, useEffect, useState } from 'react';
 import { ErrorBoundaryWrapper } from './__create/SharedErrorBoundary';
 import './src/__create/polyfills';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ThemeProvider } from './src/utils/theme/ThemeProvider';
 import { Toaster } from 'sonner-native';
 import { AlertModal } from './polyfills/web/alerts.web';
 import './global.css';
+import clearLocalData from './src/utils/maintenance/clearLocalData';
 
 const GlobalErrorReporter = () => {
   useEffect(() => {
@@ -35,6 +37,7 @@ const GlobalErrorReporter = () => {
 const Wrapper = memo(() => {
   return (
     <ErrorBoundaryWrapper>
+      <ThemeProvider>
       <SafeAreaProvider
         initialMetrics={{
           insets: { top: 64, bottom: 34, left: 0, right: 0 },
@@ -50,6 +53,7 @@ const Wrapper = memo(() => {
         <GlobalErrorReporter />
         <Toaster />
       </SafeAreaProvider>
+      </ThemeProvider>
     </ErrorBoundaryWrapper>
   );
 });
@@ -103,6 +107,21 @@ const CreateApp = () => {
       '*'
     );
   }, [pathname]);
+
+  // Optional: clear local device storage on boot when toggled via env flag
+  useEffect(() => {
+    if (process.env.EXPO_PUBLIC_CLEAR_LOCAL_ON_BOOT === 'true') {
+      (async () => {
+        try {
+          console.log('[App] Clearing local auth and preferences per EXPO_PUBLIC_CLEAR_LOCAL_ON_BOOT');
+          await clearLocalData({ includePreferences: true });
+          console.log('[App] Local data cleared.');
+        } catch (e) {
+          console.warn('[App] Failed to clear local data', e);
+        }
+      })();
+    }
+  }, []);
 
   return (
     <>

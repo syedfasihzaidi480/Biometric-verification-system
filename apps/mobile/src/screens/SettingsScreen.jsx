@@ -32,6 +32,7 @@ import { PREF_KEYS, loadPreferences, setPreference } from '@/utils/preferences';
 import { useTheme } from '@/utils/theme/ThemeProvider';
 import { syncNotificationPreference } from '@/utils/notifications/syncPreference';
 import { resetOnboarding } from '@/utils/onboarding';
+import { apiFetchJson } from '@/utils/api';
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -68,6 +69,12 @@ export default function SettingsScreen() {
         text: `${lang.nativeName} (${lang.name})`,
         onPress: () => {
           changeLanguage(lang.code);
+          // Best-effort: persist language preference to server immediately
+          (async () => {
+            try {
+              await apiFetchJson('/api/profile', { method: 'PUT', body: { preferred_language: lang.code } });
+            } catch {}
+          })();
           Alert.alert('Language Changed', `Language changed to ${lang.name}`);
         },
         style: lang.code === currentLanguage ? 'destructive' : 'default'
@@ -146,9 +153,7 @@ export default function SettingsScreen() {
           icon: <User size={20} color="#007AFF" />,
           title: 'Profile',
           subtitle: 'Manage your account information',
-          onPress: () => {
-            Alert.alert('Profile', 'Profile management coming soon');
-          },
+          onPress: () => router.push('/profile'),
         },
         {
           icon: <Globe size={20} color="#007AFF" />,
@@ -181,9 +186,7 @@ export default function SettingsScreen() {
           icon: <Lock size={20} color="#007AFF" />,
           title: 'Privacy Settings',
           subtitle: 'Manage your data and privacy',
-          onPress: () => {
-            Alert.alert('Privacy', 'Privacy settings coming soon');
-          },
+          onPress: () => router.push('/privacy'),
         },
       ],
     },

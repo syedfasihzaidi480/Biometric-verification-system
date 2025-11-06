@@ -262,6 +262,18 @@ export async function POST(request) {
       { status: 201 },
     );
   } catch (error) {
+    // Special-case: backend not configured with MongoDB
+    if (error && String(error.message || '').includes('MONGODB_URI environment variable is not set')) {
+      console.error('[REGISTER] Missing MONGODB_URI configuration');
+      return Response.json({
+        success: false,
+        error: {
+          code: 'MISCONFIGURED_DATABASE',
+          message: 'Server database is not configured. Please set MONGODB_URI in apps/web/.env and restart the server.',
+          details: process.env.NODE_ENV === 'development' ? 'Missing MONGODB_URI' : null,
+        },
+      }, { status: 500 });
+    }
     // Handle unique index violations gracefully
     if (error && (error.code === 11000 || String(error.message || '').includes('E11000'))) {
       const msg = String(error.message || '');

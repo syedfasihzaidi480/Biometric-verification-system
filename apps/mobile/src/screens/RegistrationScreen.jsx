@@ -139,8 +139,21 @@ export default function RegistrationScreen() {
         );
       }
     } catch (error) {
+      // Surface a meaningful error to the user instead of a generic network message
       console.error("Registration error:", error);
-      Alert.alert(t("common.error"), t("errors.network"));
+      try {
+        // Prefer precise API error messages when available
+        const apiMessage = error?.data?.error?.message || error?.message;
+        if (error?.code === 'NETWORK_ERROR') {
+          Alert.alert(t("common.error"), t("errors.network"));
+        } else if (typeof apiMessage === 'string' && apiMessage.trim()) {
+          Alert.alert(t("common.error"), apiMessage.trim());
+        } else {
+          Alert.alert(t("common.error"), t("errors.server"));
+        }
+      } catch {
+        Alert.alert(t("common.error"), t("errors.server"));
+      }
     } finally {
       setIsLoading(false);
     }
