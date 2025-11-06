@@ -17,6 +17,7 @@ import { apiFetchJson } from '@/utils/api';
 import { useAuth } from '@/utils/auth/useAuth';
 import useUser from '@/utils/auth/useUser';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useTheme } from '@/utils/theme/ThemeProvider';
 import {
   CheckCircle,
   Clock,
@@ -33,6 +34,7 @@ export default function HomeScreen() {
   const { isAuthenticated, signIn } = useAuth();
   const { data: authUser } = useUser();
   const { t } = useTranslation();
+  const { isDark, colors } = useTheme();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -97,8 +99,8 @@ export default function HomeScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}> 
-        <StatusBar style="dark" />
+      <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+        <StatusBar style={isDark ? 'light' : 'dark'} />
 
         <ScrollView
           contentContainerStyle={[styles.authContent, { paddingBottom: insets.bottom + 24 }]}
@@ -110,8 +112,8 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <Text style={styles.brandTitle}>{t('home.brandTitle')}</Text>
-          <Text style={styles.brandSubtitle}>{t('home.brandSubtitle')}</Text>
+          <Text style={[styles.brandTitle, { color: colors.text }]}>{t('home.brandTitle')}</Text>
+          <Text style={[styles.brandSubtitle, { color: colors.muted }]}>{t('home.brandSubtitle')}</Text>
 
           <TouchableOpacity style={styles.primaryButtonLarge} onPress={handleLogin}>
             <Text style={styles.primaryButtonText}>{t('auth.login')}</Text>
@@ -126,21 +128,21 @@ export default function HomeScreen() {
               <View style={styles.quickActionIcon}>
                 <Fingerprint size={22} color="#1F2937" />
               </View>
-              <Text style={styles.quickActionLabel}>{t('verify.title')}</Text>
+              <Text style={[styles.quickActionLabel, { color: colors.text }]}>{t('verify.title')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.quickAction} onPress={handleHelp}>
               <View style={styles.quickActionIcon}>
                 <HelpCircle size={22} color="#1F2937" />
               </View>
-              <Text style={styles.quickActionLabel}>{t('settings.items.help?.title', { defaultValue: 'Help' })}</Text>
+              <Text style={[styles.quickActionLabel, { color: colors.text }]}>{t('settings.items.help?.title', { defaultValue: 'Help' })}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.quickAction} onPress={handleSupport}>
               <View style={styles.quickActionIcon}>
                 <PhoneCall size={22} color="#1F2937" />
               </View>
-              <Text style={styles.quickActionLabel}>{t('settings.support', { defaultValue: 'Support' })}</Text>
+              <Text style={[styles.quickActionLabel, { color: colors.text }]}>{t('settings.support', { defaultValue: 'Support' })}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -150,10 +152,10 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
-        <StatusBar style="dark" />
+      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>{t('common.loading')}</Text>
+        <Text style={[styles.loadingText, { color: colors.muted }]}>{t('common.loading')}</Text>
       </View>
     );
   }
@@ -161,8 +163,8 @@ export default function HomeScreen() {
   const hasVerificationSession = profile?.voice_verified || profile?.face_verified || profile?.document_verified;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar style="dark" />
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       
       <ScrollView 
         style={styles.scrollView}
@@ -171,23 +173,23 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.welcomeTitle}>
+          <Text style={[styles.welcomeTitle, { color: colors.text }]}>
             {t('home.welcomeBack', { name: profile?.name || authUser?.name || 'User' })}
           </Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>
             {t('home.checkStatusBelow')}
           </Text>
         </View>
 
         {/* Verification Status Card */}
-        <View style={styles.statusCard}>
+        <View style={[styles.statusCard, { backgroundColor: colors.surface }]}> 
           <View style={styles.statusHeader}>
             <View style={styles.shieldIcon}>
               <Text style={styles.shieldEmoji}>🛡️</Text>
             </View>
-            <Text style={styles.statusTitle}>{t('home.verificationStatus')}</Text>
+            <Text style={[styles.statusTitle, { color: colors.text }]}>{t('home.verificationStatus')}</Text>
           </View>
-          <Text style={styles.statusMessage}>
+          <Text style={[styles.statusMessage, { color: colors.muted }]}>
             {hasVerificationSession 
               ? t('home.continueVerification')
               : t('home.noSession')}
@@ -196,19 +198,19 @@ export default function HomeScreen() {
 
         {/* Verification Steps */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('home.verificationSteps')}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('home.verificationSteps')}</Text>
           
           {/* Voice Verification */}
           <TouchableOpacity 
-            style={styles.verificationCard}
+            style={[styles.verificationCard, { backgroundColor: colors.surface }]}
             onPress={() => router.push('/(tabs)/verify')}
           >
             <View style={styles.cardIcon}>
               <Text style={styles.iconEmoji}>🎙️</Text>
             </View>
             <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{t('home.voiceVerification')}</Text>
-              <Text style={styles.cardSubtitle}>{t('home.voiceVerificationSubtitle')}</Text>
+        <Text style={[styles.cardTitle, { color: colors.text }]}>{t('home.voiceVerification')}</Text>
+        <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{t('home.voiceVerificationSubtitle')}</Text>
             </View>
             {profile?.voice_verified ? (
               <CheckCircle size={24} color="#10B981" />
@@ -219,15 +221,15 @@ export default function HomeScreen() {
 
           {/* Face Liveness */}
           <TouchableOpacity 
-            style={styles.verificationCard}
+            style={[styles.verificationCard, { backgroundColor: colors.surface }]}
             onPress={() => router.push('/(tabs)/verify')}
           >
             <View style={styles.cardIcon}>
               <Text style={styles.iconEmoji}>🤳</Text>
             </View>
             <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{t('home.faceLiveness')}</Text>
-              <Text style={styles.cardSubtitle}>{t('home.faceLivenessSubtitle')}</Text>
+        <Text style={[styles.cardTitle, { color: colors.text }]}>{t('home.faceLiveness')}</Text>
+        <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{t('home.faceLivenessSubtitle')}</Text>
             </View>
             {profile?.face_verified ? (
               <CheckCircle size={24} color="#10B981" />
@@ -238,15 +240,15 @@ export default function HomeScreen() {
 
           {/* Document Verification */}
           <TouchableOpacity 
-            style={styles.verificationCard}
+            style={[styles.verificationCard, { backgroundColor: colors.surface }]}
             onPress={() => router.push('/(tabs)/verify')}
           >
             <View style={styles.cardIcon}>
               <Text style={styles.iconEmoji}>📄</Text>
             </View>
             <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{t('home.documentVerification')}</Text>
-              <Text style={styles.cardSubtitle}>{t('home.documentVerificationSubtitle')}</Text>
+        <Text style={[styles.cardTitle, { color: colors.text }]}>{t('home.documentVerification')}</Text>
+        <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{t('home.documentVerificationSubtitle')}</Text>
             </View>
             {profile?.document_verified ? (
               <CheckCircle size={24} color="#10B981" />
@@ -259,7 +261,7 @@ export default function HomeScreen() {
         {/* Next Steps */}
         {!profile?.profile_completed && (
           <View style={styles.nextStepsSection}>
-            <Text style={styles.nextStepsTitle}>{t('home.nextSteps')}</Text>
+            <Text style={[styles.nextStepsTitle, { color: colors.text }]}>{t('home.nextSteps')}</Text>
             <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => router.push('/(tabs)/register')}

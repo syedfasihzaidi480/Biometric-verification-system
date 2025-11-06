@@ -283,7 +283,33 @@ export const { auth } = CreateAuth({
         let user = null;
 
         if (trimmedIdentifier.includes('@')) {
-          user = await adapter.getUserByEmail(trimmedIdentifier.toLowerCase());
+          const normalizedEmail = trimmedIdentifier.toLowerCase();
+          user = await adapter.getUserByEmail(normalizedEmail);
+          // Fallback: if not found in auth_users, try mapping via profile users collection
+          if (!user) {
+            try {
+              const mongoClient = new MongoClient(mongoUri);
+              await mongoClient.connect();
+              const mongoDb = mongoClient.db(mongoDbName);
+              const usersCollection = mongoDb.collection('users');
+              const matchedUser = await usersCollection.findOne({ email: normalizedEmail });
+              if (matchedUser?.auth_user_id) {
+                user = await adapter.getUser(matchedUser.auth_user_id);
+                if (user) {
+                  // hydrate accounts for password validation
+                  const accs = await mongoDb
+                    .collection('auth_accounts')
+                    .find({ userId: user.id })
+                    .project({ _id: 0 })
+                    .toArray();
+                  user = { ...user, accounts: accs };
+                }
+              }
+              await mongoClient.close();
+            } catch (err) {
+              console.error('[AUTH] Email lookup fallback failed:', err);
+            }
+          }
         } else {
           // Try to resolve by phone via users collection
           const db = await getAdapter();

@@ -216,7 +216,7 @@ export default function VoiceEnrollmentScreen() {
     try {
       // Read the audio as base64 and send JSON instead of FormData
       const base64 = await FileSystem.readAsStringAsync(audioUri, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: "base64",
       });
 
       const response = await apiFetch("/api/voice/enroll", {

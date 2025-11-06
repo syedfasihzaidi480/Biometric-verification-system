@@ -181,6 +181,43 @@ app.use(
             } catch (err) {
               console.error('[SIGN-IN] Email lookup failed:', err);
             }
+
+            // Fallback: if not found in auth_users, try mapping via profile users collection
+            if (!user && mongoDb) {
+              try {
+                const usersCollection = mongoDb.collection('users');
+                const authUsersCollection = mongoDb.collection('auth_users');
+                const authAccountsCollection = mongoDb.collection('auth_accounts');
+
+                const profile = await usersCollection.findOne({ email: normalizedEmail });
+                if (profile?.auth_user_id) {
+                  const authUser = await authUsersCollection.findOne({ id: profile.auth_user_id });
+                  const authAccount = await authAccountsCollection.findOne({
+                    userId: profile.auth_user_id,
+                    provider: 'credentials',
+                  });
+
+                  if (authUser && authAccount?.password) {
+                    user = {
+                      id: authUser.id,
+                      name: authUser.name,
+                      email: authUser.email,
+                      emailVerified: authUser.emailVerified,
+                      image: authUser.image,
+                      accounts: [
+                        {
+                          provider: 'credentials',
+                          providerAccountId: authAccount.providerAccountId ?? authAccount.userId,
+                          password: authAccount.password,
+                        },
+                      ],
+                    };
+                  }
+                }
+              } catch (err) {
+                console.error('[SIGN-IN] Email fallback lookup failed:', err);
+              }
+            }
           }
 
           if (!user && normalizedPhone && mongoDb) {

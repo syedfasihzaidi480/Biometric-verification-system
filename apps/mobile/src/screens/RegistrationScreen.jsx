@@ -139,20 +139,46 @@ export default function RegistrationScreen() {
         );
       }
     } catch (error) {
-      // Surface a meaningful error to the user instead of a generic network message
+      // Handle duplicates gracefully: if user/email already exists, try signing the user in
       console.error("Registration error:", error);
-      try {
-        // Prefer precise API error messages when available
-        const apiMessage = error?.data?.error?.message || error?.message;
-        if (error?.code === 'NETWORK_ERROR') {
-          Alert.alert(t("common.error"), t("errors.network"));
-        } else if (typeof apiMessage === 'string' && apiMessage.trim()) {
-          Alert.alert(t("common.error"), apiMessage.trim());
-        } else {
-          Alert.alert(t("common.error"), t("errors.server"));
+      const apiCode = error?.data?.error?.code;
+      const apiMessage = error?.data?.error?.message || error?.message;
+
+      if (apiCode === 'EMAIL_EXISTS' || apiCode === 'USER_EXISTS') {
+        const identifier = formData.email.trim() || formData.phoneNumber.trim();
+        if (identifier && formData.password.trim()) {
+          try {
+            await signInWithCredentials({
+              identifier,
+              email: formData.email.trim() || undefined,
+              phone: formData.phoneNumber.trim() || undefined,
+              password: formData.password.trim(),
+              callbackUrl: '/',
+            });
+            // Proceed to next step after successful sign-in
+            router.push({
+              pathname: "/voice-enrollment",
+              params: {
+                // user id will come from session; still pass UI context
+                userName: formData.fullName.trim(),
+                dateOfBirth: formData.dateOfBirth,
+              },
+            });
+            return;
+          } catch (authError) {
+            console.warn('Auto sign-in after duplicate failed:', authError);
+            // Fall through to show message
+          }
         }
-      } catch {
-        Alert.alert(t("common.error"), t("errors.server"));
+      }
+
+      // Surface a meaningful error to the user
+      if (error?.code === 'NETWORK_ERROR') {
+        Alert.alert(t('common.error'), t('errors.network'));
+      } else if (typeof apiMessage === 'string' && apiMessage.trim()) {
+        Alert.alert(t('common.error'), apiMessage.trim());
+      } else {
+        Alert.alert(t('common.error'), t('errors.server'));
       }
     } finally {
       setIsLoading(false);

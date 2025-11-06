@@ -161,29 +161,9 @@ export async function POST(request) {
 
     const nowIso = new Date().toISOString();
     const userId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
-    const userDoc = {
-      id: userId,
-      name,
-  phone: phone.trim(),
-  email: normalizedEmail || null,
-      date_of_birth: date_of_birth || null,
-      pension_number,
-      preferred_language,
-      auth_user_id: null,
-      role: 'user',
-      profile_completed: false,
-      voice_verified: false,
-      face_verified: false,
-      document_verified: false,
-      admin_approved: false,
-      payment_released: false,
-      created_at: nowIso,
-      updated_at: nowIso,
-    };
-  await users.insertOne(userDoc);
-    console.log('[REGISTER] User created:', userDoc.id);
-
     const authUserId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+
+    // Create auth user FIRST so we have the auth_user_id ready
     const authUserDoc = {
       id: authUserId,
       email: normalizedEmail || null,
@@ -193,7 +173,7 @@ export async function POST(request) {
       created_at: nowIso,
       updated_at: nowIso,
     };
-  await authUsers.insertOne(authUserDoc);
+    await authUsers.insertOne(authUserDoc);
 
     const hashedPassword = await hash(password);
     const authAccountDoc = {
@@ -212,7 +192,30 @@ export async function POST(request) {
       created_at: nowIso,
       updated_at: nowIso,
     };
-  await authAccounts.insertOne(authAccountDoc);
+    await authAccounts.insertOne(authAccountDoc);
+
+    // Now insert user with auth_user_id already set (atomic, no race condition)
+    const userDoc = {
+      id: userId,
+      name,
+      phone: phone.trim(),
+      email: normalizedEmail || null,
+      date_of_birth: date_of_birth || null,
+      pension_number,
+      preferred_language,
+      auth_user_id: authUserId,
+      role: 'user',
+      profile_completed: false,
+      voice_verified: false,
+      face_verified: false,
+      document_verified: false,
+      admin_approved: false,
+      payment_released: false,
+      created_at: nowIso,
+      updated_at: nowIso,
+    };
+    await users.insertOne(userDoc);
+    console.log('[REGISTER] User created:', userDoc.id);
 
     const voiceProfileDoc = {
       id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()),
@@ -224,9 +227,7 @@ export async function POST(request) {
       created_at: nowIso,
       updated_at: nowIso,
     };
-  await voiceProfiles.insertOne(voiceProfileDoc);
-
-    await users.updateOne({ id: userDoc.id }, { $set: { auth_user_id: authUserId, updated_at: nowIso } });
+    await voiceProfiles.insertOne(voiceProfileDoc);
 
     const ipAddress =
       request.headers.get("x-forwarded-for") ||

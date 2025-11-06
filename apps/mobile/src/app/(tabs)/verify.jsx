@@ -15,11 +15,13 @@ import { useAuth } from '@/utils/auth/useAuth';
 import { apiFetchJson } from '@/utils/api';
 import { CheckCircle, Clock, Mic, Camera, FileText, ArrowRight } from 'lucide-react-native';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useTheme } from '@/utils/theme/ThemeProvider';
 
 export default function VerifyScreen() {
   const insets = useSafeAreaInsets();
   const { isAuthenticated, signIn } = useAuth();
   const { t } = useTranslation();
+  const { isDark, colors } = useTheme();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const profileRef = useRef(null);
@@ -221,11 +223,11 @@ export default function VerifyScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <StatusBar style="dark" />
+      <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <View style={styles.centerContent}>
-          <Text style={styles.title}>{t('verify.signInRequired')}</Text>
-          <Text style={styles.subtitle}>{t('verify.pleaseSignIn')}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('verify.signInRequired')}</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>{t('verify.pleaseSignIn')}</Text>
           <TouchableOpacity style={styles.primaryButton} onPress={() => signIn()}>
             <Text style={styles.primaryButtonText}>{t('auth.signIn')}</Text>
           </TouchableOpacity>
@@ -236,11 +238,11 @@ export default function VerifyScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <StatusBar style="dark" />
+      <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <View style={styles.centerContent}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>{t('common.loading')}</Text>
+          <Text style={[styles.loadingText, { color: colors.muted }]}>{t('common.loading')}</Text>
         </View>
       </View>
     );
@@ -248,11 +250,11 @@ export default function VerifyScreen() {
 
   if (!profile?.profile_completed) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <StatusBar style="dark" />
+      <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <View style={styles.centerContent}>
-          <Text style={styles.title}>{t('verify.completeYourProfile')}</Text>
-          <Text style={styles.subtitle}>{t('verify.pleaseCompleteProfileFirst')}</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('verify.completeYourProfile')}</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>{t('verify.pleaseCompleteProfileFirst')}</Text>
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => router.push('/(tabs)/profile')}
@@ -265,19 +267,19 @@ export default function VerifyScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar style="dark" />
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('verify.title')}</Text>
-        <Text style={styles.headerSubtitle}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('verify.title')}</Text>
+        <Text style={[styles.headerSubtitle, { color: colors.muted }]}>
           {t('verify.subtitle')}
         </Text>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('verify.progress')}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('verify.progress')}</Text>
 
           {verificationSteps.map((step, index) => {
             const StepIcon = getStepIcon(step.id);
@@ -292,6 +294,7 @@ export default function VerifyScreen() {
                 key={step.id}
                 style={[
                   styles.card,
+                  { backgroundColor: colors.surface },
                   step.status === 'verified' && styles.cardVerified,
                   isDisabled && styles.cardDisabled,
                 ]}
@@ -303,8 +306,8 @@ export default function VerifyScreen() {
                 </View>
 
                 <View style={styles.cardContent}>
-                  <Text style={styles.cardTitle}>{step.title}</Text>
-                  <Text style={styles.cardDescription}>{step.description}</Text>
+                  <Text style={[styles.cardTitle, { color: colors.text }]}>{step.title}</Text>
+                  <Text style={[styles.cardDescription, { color: colors.muted }]}>{step.description}</Text>
                   <View style={styles.cardStatus}>
                     {getStatusIcon(step.status)}
                     <Text
@@ -327,16 +330,16 @@ export default function VerifyScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('verify.overallStatus')}</Text>
-          <View style={styles.progressCard}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('verify.overallStatus')}</Text>
+          <View style={[styles.progressCard, { backgroundColor: colors.surface }]}> 
             <View style={styles.progressHeader}>
-              <Text style={styles.progressTitle}>{t('verify.progress')}</Text>
+              <Text style={[styles.progressTitle, { color: colors.text }]}>{t('verify.progress')}</Text>
               <Text style={styles.progressPercentage}>{Math.round(progress)}%</Text>
             </View>
             <View style={styles.progressBarContainer}>
               <View style={[styles.progressBar, { width: `${progress}%` }]} />
             </View>
-            <Text style={styles.progressDescription}>
+            <Text style={[styles.progressDescription, { color: colors.muted }]}>
               {progress === 100
                 ? t('verify.allStepsCompleted')
                 : t('verify.stepsCompletedOf', { count: Math.round(progress / 33.33) })}
@@ -345,9 +348,9 @@ export default function VerifyScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('verify.instructions')}</Text>
-          <View style={styles.instructionsCard}>
-            <Text style={styles.instructionsText}>{t('verify.bulletPoints')}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('verify.instructions')}</Text>
+          <View style={[styles.instructionsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}> 
+            <Text style={[styles.instructionsText, { color: colors.text }]}>{t('verify.bulletPoints')}</Text>
           </View>
         </View>
 

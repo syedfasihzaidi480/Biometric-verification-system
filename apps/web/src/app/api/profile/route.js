@@ -94,7 +94,8 @@ export async function PUT(request) {
       profile_completed,
       voice_verified,
       face_verified,
-      document_verified
+      document_verified,
+      email,
     } = body;
 
     const db = await getMongoDb();
@@ -109,7 +110,7 @@ export async function PUT(request) {
       updated_at: now,
     };
 
-    // Add fields from request body
+  // Add fields from request body
     if (typeof name === 'string' && name.trim()) userData.name = name.trim();
     if (typeof phone === 'string' && phone.trim()) userData.phone = phone.trim();
     if (typeof date_of_birth === 'string' && date_of_birth.trim()) userData.date_of_birth = date_of_birth.trim();
@@ -118,6 +119,7 @@ export async function PUT(request) {
     if (typeof voice_verified === 'boolean') userData.voice_verified = voice_verified;
     if (typeof face_verified === 'boolean') userData.face_verified = face_verified;
     if (typeof document_verified === 'boolean') userData.document_verified = document_verified;
+  if (typeof email === 'string' && email.trim()) userData.email = email.trim().toLowerCase();
 
     // Check if only updated_at would be set
     if (Object.keys(userData).length === 2) { // auth_user_id + updated_at only
@@ -145,7 +147,8 @@ export async function PUT(request) {
         id: newUserId,
         auth_user_id: authUserId,
         name: userData.name || '',
-        email: session?.user?.email || '',
+  // Prefer explicitly provided email (already normalized to lowercase); fall back to session email
+  email: userData.email || (session?.user?.email ? String(session.user.email).toLowerCase() : ''),
         phone: userData.phone || null,
         date_of_birth: userData.date_of_birth || null,
         preferred_language: userData.preferred_language || 'en',
@@ -163,6 +166,22 @@ export async function PUT(request) {
       console.log('[Profile PUT] Creating new user:', JSON.stringify(newUserDoc, null, 2));
       await users.insertOne(newUserDoc);
       existingUser = newUserDoc;
+    }
+
+    // If email provided, also update auth user's email so they can sign in with it
+    if (typeof userData.email === 'string' && userData.email.trim()) {
+      const normalizedEmail = userData.email.trim().toLowerCase();
+      const authUsers = db.collection('auth_users');
+      // Prevent duplicate emails pointing to different auth users
+      const emailInUse = await authUsers.findOne({ email: normalizedEmail, id: { $ne: authUserId } });
+      if (emailInUse) {
+        console.error('[Profile PUT] Email already in use by another account');
+        return Response.json({ error: 'Email already in use' }, { status: 409 });
+      }
+      await authUsers.updateOne(
+        { id: authUserId },
+        { $set: { email: normalizedEmail } }
+      );
     }
 
     // Fetch the updated/created user

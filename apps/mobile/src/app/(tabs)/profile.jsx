@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/utils/auth/useAuth';
 import useUser from '@/utils/auth/useUser';
@@ -28,12 +29,14 @@ import {
   Settings
 } from 'lucide-react-native';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useTheme } from '@/utils/theme/ThemeProvider';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { isAuthenticated, signIn, signOut } = useAuth();
   const { data: authUser } = useUser();
   const { t } = useTranslation();
+  const { isDark, colors } = useTheme();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,6 +47,17 @@ export default function ProfileScreen() {
       setLoading(false);
     }
   }, [isAuthenticated]);
+
+  // Ensure the profile is refreshed when returning from Settings/Profile edit
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isAuthenticated) {
+        fetchProfile();
+      }
+      // no cleanup necessary
+      return undefined;
+    }, [isAuthenticated])
+  );
 
   const fetchProfile = async () => {
     try {
@@ -100,11 +114,11 @@ export default function ProfileScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
-        <StatusBar style="dark" />
+      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         
-        <Text style={styles.title}>{t('auth.signInRequired')}</Text>
-        <Text style={styles.subtitle}>{t('auth.pleaseSignInToViewProfile')}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('auth.signInRequired')}</Text>
+        <Text style={[styles.subtitle, { color: colors.muted }]}>{t('auth.pleaseSignInToViewProfile')}</Text>
         
         <TouchableOpacity
           style={styles.primaryButton}
@@ -118,21 +132,21 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
-        <StatusBar style="dark" />
+      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <ActivityIndicator size="large" color="#3B82F6" />
-        <Text style={styles.loadingText}>{t('common.loading')}</Text>
+        <Text style={[styles.loadingText, { color: colors.muted }]}>{t('common.loading')}</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar style="dark" />
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
+      <View style={[styles.header, { backgroundColor: colors.background }]}> 
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('profile.title')}</Text>
         <TouchableOpacity accessibilityLabel="Open Settings" onPress={() => router.push('/settings')} style={styles.headerAction}>
           <Settings size={22} color="#1F2937" />
         </TouchableOpacity>
@@ -144,14 +158,14 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* User Info Card */}
-        <View style={styles.userCard}>
+        <View style={[styles.userCard, { backgroundColor: colors.surface }]}> 
           <View style={styles.avatarLarge}>
             <Text style={styles.avatarInitial}>
               {(profile?.name || authUser?.name || 'U').charAt(0).toUpperCase()}
             </Text>
           </View>
-          <Text style={styles.userName}>{profile?.name || authUser?.name || 'User'}</Text>
-          <Text style={styles.userEmail}>{profile?.email || authUser?.email}</Text>
+          <Text style={[styles.userName, { color: colors.text }]}>{profile?.name || authUser?.name || 'User'}</Text>
+          <Text style={[styles.userEmail, { color: colors.muted }]}>{profile?.email || authUser?.email}</Text>
           
           {/* Status Badge */}
           {profile?.admin_approved ? (
@@ -169,16 +183,16 @@ export default function ProfileScreen() {
 
         {/* Account Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('profile.accountInformation')}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.accountInformation')}</Text>
           
-          <View style={styles.infoCard}>
+          <View style={[styles.infoCard, { backgroundColor: colors.surface }]}> 
             <View style={styles.infoItem}>
               <View style={styles.infoIcon}>
                 <User size={16} color="#6B7280" />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>{t('profile.fullName')}</Text>
-                <Text style={styles.infoValue}>{profile?.name || t('profile.notProvided')}</Text>
+                <Text style={[styles.infoLabel, { color: colors.muted }]}>{t('profile.fullName')}</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>{profile?.name || t('profile.notProvided')}</Text>
               </View>
             </View>
 
@@ -187,8 +201,8 @@ export default function ProfileScreen() {
                 <Phone size={16} color="#6B7280" />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>{t('profile.phoneNumber')}</Text>
-                <Text style={styles.infoValue}>{profile?.phone || t('profile.notProvided')}</Text>
+                <Text style={[styles.infoLabel, { color: colors.muted }]}>{t('profile.phoneNumber')}</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>{profile?.phone || t('profile.notProvided')}</Text>
               </View>
             </View>
 
@@ -197,8 +211,8 @@ export default function ProfileScreen() {
                 <Mail size={16} color="#6B7280" />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>{t('profile.email')}</Text>
-                <Text style={styles.infoValue}>{profile?.email || authUser?.email || t('profile.notProvided')}</Text>
+                <Text style={[styles.infoLabel, { color: colors.muted }]}>{t('profile.email')}</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>{profile?.email || authUser?.email || t('profile.notProvided')}</Text>
               </View>
             </View>
 
@@ -207,7 +221,7 @@ export default function ProfileScreen() {
                 <Calendar size={16} color="#6B7280" />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>{t('profile.dateOfBirth')}</Text>
+                <Text style={[styles.infoLabel, { color: colors.muted }]}>{t('profile.dateOfBirth')}</Text>
                 <Text style={styles.infoValue}>{formatDate(profile?.date_of_birth)}</Text>
               </View>
             </View>
@@ -216,12 +230,12 @@ export default function ProfileScreen() {
 
         {/* Verification Status */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('profile.verificationStatus')}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.verificationStatus')}</Text>
           
-          <View style={styles.verificationCard}>
+          <View style={[styles.verificationCard, { backgroundColor: colors.surface }]}> 
             <View style={styles.verificationItem}>
               <View style={styles.verificationHeader}>
-                <Text style={styles.verificationLabel}>{t('profile.voiceVerification')}</Text>
+                <Text style={[styles.verificationLabel, { color: colors.text }]}>{t('profile.voiceVerification')}</Text>
                 {getStatusIcon(profile?.voice_verified)}
               </View>
               <Text style={[
@@ -236,7 +250,7 @@ export default function ProfileScreen() {
 
             <View style={styles.verificationItem}>
               <View style={styles.verificationHeader}>
-                <Text style={styles.verificationLabel}>{t('profile.faceVerification')}</Text>
+                <Text style={[styles.verificationLabel, { color: colors.text }]}>{t('profile.faceVerification')}</Text>
                 {getStatusIcon(profile?.face_verified)}
               </View>
               <Text style={[
@@ -251,7 +265,7 @@ export default function ProfileScreen() {
 
             <View style={styles.verificationItem}>
               <View style={styles.verificationHeader}>
-                <Text style={styles.verificationLabel}>{t('profile.documentVerification')}</Text>
+                <Text style={[styles.verificationLabel, { color: colors.text }]}>{t('profile.documentVerification')}</Text>
                 {getStatusIcon(profile?.document_verified)}
               </View>
               <Text style={[
@@ -266,15 +280,15 @@ export default function ProfileScreen() {
 
         {/* Admin Review Status */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('profile.adminReviewStatus')}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.adminReviewStatus')}</Text>
           
-          <View style={styles.adminCard}>
+          <View style={[styles.adminCard, { backgroundColor: colors.surface }]}> 
             <View style={styles.adminItem}>
               <View style={styles.adminIcon}>
                 <Shield size={16} color="#6B7280" />
               </View>
               <View style={styles.adminContent}>
-                <Text style={styles.adminLabel}>{t('profile.adminApproval')}</Text>
+                <Text style={[styles.adminLabel, { color: colors.text }]}>{t('profile.adminApproval')}</Text>
                 <Text style={[
                   styles.adminStatus,
                   { color: profile?.admin_approved ? '#10B981' : '#F59E0B' }
@@ -291,7 +305,7 @@ export default function ProfileScreen() {
                 <CreditCard size={16} color="#6B7280" />
               </View>
               <View style={styles.adminContent}>
-                <Text style={styles.adminLabel}>{t('profile.paymentStatus')}</Text>
+                <Text style={[styles.adminLabel, { color: colors.text }]}>{t('profile.paymentStatus')}</Text>
                 <Text style={[
                   styles.adminStatus,
                   { color: profile?.payment_released ? '#10B981' : '#F59E0B' }

@@ -12,12 +12,14 @@ import KeyboardAvoidingAnimatedView from '@/components/KeyboardAvoidingAnimatedV
 import { apiFetch, apiFetchJson } from '@/utils/api';
 import DateInput from '@/components/DateInput';
 import { useTranslation } from '@/i18n/useTranslation';
+import { useTheme } from '@/utils/theme/ThemeProvider';
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const { isAuthenticated, signIn } = useAuth();
   const { data: authUser } = useUser();
   const { t } = useTranslation();
+  const { isDark, colors } = useTheme();
   
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -290,11 +292,11 @@ export default function RegisterScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
-        <StatusBar style="dark" />
+      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         
-        <Text style={styles.title}>{t('auth.signInRequired')}</Text>
-        <Text style={styles.subtitle}>{t('auth.pleaseSignInToRegister')}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('auth.signInRequired')}</Text>
+        <Text style={[styles.subtitle, { color: colors.muted }]}>{t('auth.pleaseSignInToRegister')}</Text>
         
         <TouchableOpacity
           style={styles.primaryButton}
@@ -308,23 +310,23 @@ export default function RegisterScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
-        <StatusBar style="dark" />
+      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <ActivityIndicator size="large" color="#3B82F6" />
-        <Text style={styles.loadingText}>{t('common.loading')}</Text>
+        <Text style={[styles.loadingText, { color: colors.muted }]}>{t('common.loading')}</Text>
       </View>
     );
   }
 
   return (
     <KeyboardAvoidingAnimatedView style={{ flex: 1 }} behavior="padding">
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <StatusBar style="dark" />
+      <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>{t('home.completeProfileRegistration')}</Text>
-          <Text style={styles.headerSubtitle}>{t('verify.subtitle')}</Text>
+        <View style={[styles.header, { backgroundColor: colors.background }]}> 
+          <Text style={[styles.headerTitle, { color: colors.text }]}>{t('home.completeProfileRegistration')}</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.muted }]}>{t('verify.subtitle')}</Text>
         </View>
 
         <ScrollView
@@ -334,11 +336,11 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Personal Information Card */}
-          <View style={styles.infoCard}>
-            <Text style={styles.cardTitle}>{t('registration.personalInformation')}</Text>
+          <View style={[styles.infoCard, { backgroundColor: colors.surface }]}> 
+            <Text style={[styles.cardTitle, { color: colors.text }]}>{t('registration.personalInformation')}</Text>
             
             <View style={styles.formGroup}>
-              <Text style={styles.label}>{t('registration.fullName')}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t('registration.fullName')}</Text>
               <View style={styles.inputContainer}>
                 <User size={18} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
@@ -353,7 +355,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>{t('registration.phoneNumber')} *</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t('registration.phoneNumber')} *</Text>
               <View style={styles.inputContainer}>
                 <Phone size={18} color="#9CA3AF" style={styles.inputIcon} />
                 <TextInput
@@ -368,7 +370,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>{t('registration.dateOfBirth')} *</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t('registration.dateOfBirth')} *</Text>
               <View style={styles.inputContainer}>
                 <Calendar size={18} color="#9CA3AF" style={styles.inputIcon} />
                 <DateInput value={dateOfBirth} onChangeText={setDateOfBirth} />
@@ -376,7 +378,7 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.formGroup}>
-              <Text style={styles.label}>{t('registration.idDocumentType')}</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t('registration.idDocumentType')}</Text>
               <View style={styles.documentTypeRow}>
                 {documentTypes.map((type) => (
                   <TouchableOpacity
@@ -400,8 +402,8 @@ export default function RegisterScreen() {
           </View>
 
           {/* Document Upload Card */}
-          <View style={styles.uploadCard}>
-            <Text style={styles.cardTitle}>{t('registration.idDocumentUpload')}</Text>
+          <View style={[styles.uploadCard, { backgroundColor: colors.surface }]}> 
+            <Text style={[styles.cardTitle, { color: colors.text }]}>{t('registration.idDocumentUpload')}</Text>
             
             <TouchableOpacity
               style={styles.uploadArea}
@@ -410,14 +412,14 @@ export default function RegisterScreen() {
               {selectedDocument ? (
                 <View style={styles.uploadedDocument}>
                   <CheckCircle size={24} color="#10B981" />
-                  <Text style={styles.uploadedText}>{t('registration.documentSelected')}</Text>
+                  <Text style={[styles.uploadedText, { color: '#10B981' }]}>{t('registration.documentSelected')}</Text>
                   <Text style={styles.fileName}>{selectedDocument.name}</Text>
                 </View>
               ) : (
                 <View style={styles.uploadPrompt}>
                   <Upload size={32} color="#9CA3AF" />
-                  <Text style={styles.uploadText}>{t('registration.tapToUploadId')}</Text>
-                  <Text style={styles.uploadSubtext}>
+                  <Text style={[styles.uploadText, { color: colors.muted }]}>{t('registration.tapToUploadId')}</Text>
+                  <Text style={[styles.uploadSubtext, { color: colors.muted }]}>
                     {t('registration.supportedFormats')}
                   </Text>
                 </View>

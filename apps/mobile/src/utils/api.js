@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { useAuthStore } from '@/utils/auth/store';
 
 // Compute API base URL for mobile (Expo) environments
 // Prefer EXPO_PUBLIC_API_URL; support legacy EXPO_PUBLIC_BASE_URL; else use sensible localhost defaults
@@ -23,6 +24,14 @@ export async function apiFetch(path, options = {}) {
 
   // Normalize headers
   const headers = { ...(opts.headers || {}) };
+
+  // Attach Authorization header when JWT is available in auth store
+  try {
+    const jwt = useAuthStore.getState()?.auth?.jwt;
+    if (jwt && !headers.Authorization) {
+      headers.Authorization = `Bearer ${jwt}`;
+    }
+  } catch {}
 
   // Ensure cookies are included so API sessions stay intact
   if (typeof opts.credentials === 'undefined') {

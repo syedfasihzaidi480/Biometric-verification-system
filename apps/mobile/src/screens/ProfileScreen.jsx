@@ -40,6 +40,15 @@ export default function ProfileScreen() {
 
   const save = async () => {
     if (saving) return;
+    // Basic validation to avoid server-side 400s
+    if (!form.name?.trim()) {
+      Alert.alert(t('common.error'), t('registration.nameRequired'));
+      return;
+    }
+    if (!form.phone?.trim()) {
+      Alert.alert(t('common.error'), t('registration.phoneRequired'));
+      return;
+    }
     setSaving(true);
     try {
       await apiFetchJson('/api/profile', {

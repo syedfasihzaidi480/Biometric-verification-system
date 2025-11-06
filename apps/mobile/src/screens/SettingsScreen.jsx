@@ -267,10 +267,10 @@ export default function SettingsScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}> 
-        <StatusBar style="dark" />
-        <Text style={{ fontSize: 20, fontWeight: '700', color: '#1F2937', marginBottom: 8 }}>Please Sign In</Text>
-        <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 16 }}>Sign in to access Settings</Text>
+      <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }]}> 
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text, marginBottom: 8 }}>Please Sign In</Text>
+        <Text style={{ fontSize: 14, color: colors.muted, marginBottom: 16 }}>Sign in to access Settings</Text>
         <TouchableOpacity onPress={signIn} style={{ backgroundColor: '#007AFF', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 }}>
           <Text style={{ color: '#fff', fontWeight: '600' }}>Sign In</Text>
         </TouchableOpacity>
@@ -279,18 +279,18 @@ export default function SettingsScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar style="dark" />
+    <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
+      <StatusBar style={isDark ? 'light' : 'dark'} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}> 
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <ArrowLeft size={24} color="#333" />
+          <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('settings.title')}</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('settings.title')}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -301,8 +301,8 @@ export default function SettingsScreen() {
       >
         {settingSections.map((section, sectionIndex) => (
           <View key={sectionIndex} style={styles.section}>
-            <Text style={styles.sectionTitle}>{section.title}</Text>
-            <View style={styles.sectionItems}>
+            <Text style={[styles.sectionTitle, { color: colors.muted }]}>{section.title}</Text>
+            <View style={[styles.sectionItems, { backgroundColor: colors.surface }]}> 
               {section.items.map((item, itemIndex) => (
                 <TouchableOpacity
                   key={itemIndex}
@@ -318,9 +318,9 @@ export default function SettingsScreen() {
                       {item.icon}
                     </View>
                     <View style={styles.settingText}>
-                      <Text style={styles.settingTitle}>{item.title}</Text>
+                      <Text style={[styles.settingTitle, { color: colors.text }]}>{item.title}</Text>
                       {item.subtitle && (
-                        <Text style={styles.settingSubtitle}>{item.subtitle}</Text>
+                        <Text style={[styles.settingSubtitle, { color: colors.muted }]}>{item.subtitle}</Text>
                       )}
                     </View>
                   </View>
@@ -334,7 +334,7 @@ export default function SettingsScreen() {
                         thumbColor="#FFFFFF"
                       />
                     ) : (
-                      <ChevronRight size={20} color="#9CA3AF" />
+                      <ChevronRight size={20} color={colors.muted} />
                     )}
                   </View>
                 </TouchableOpacity>
@@ -346,7 +346,7 @@ export default function SettingsScreen() {
         {/* Logout Button */}
         <View style={styles.logoutSection}>
           <TouchableOpacity
-            style={styles.logoutButton}
+            style={[styles.logoutButton, { backgroundColor: colors.surface, borderColor: '#FEE2E2' }]} 
             onPress={handleLogout}
           >
             <LogOut size={20} color="#EF4444" />
@@ -356,7 +356,7 @@ export default function SettingsScreen() {
 
         {/* App Version */}
         <View style={styles.versionSection}>
-          <Text style={styles.versionText}>
+          <Text style={[styles.versionText, { color: colors.muted }]}>
             {t('settings.version')} 1.0.0
           </Text>
         </View>
