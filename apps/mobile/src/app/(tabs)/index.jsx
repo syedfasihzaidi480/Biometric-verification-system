@@ -138,7 +138,9 @@ export default function HomeScreen() {
               <View style={styles.quickActionIcon}>
                 <HelpCircle size={22} color="#1F2937" />
               </View>
-              <Text style={[styles.quickActionLabel, { color: colors.text }]}>{t('settings.items.help?.title', { defaultValue: 'Help' })}</Text>
+              <Text style={[styles.quickActionLabel, { color: colors.text }]}>
+                {t('settings.items.help.title', { defaultValue: 'Help & Support' })}
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.quickAction} onPress={handleSupport}>
@@ -218,14 +220,14 @@ export default function HomeScreen() {
             </View>
             <View style={styles.statusTextGroup}>
               <Text style={[styles.statusTitle, { color: colors.text }]}>
-                {t('home.verificationStatusTitle', { defaultValue: 'Verification Status' })}
+                {t('home.verificationStatus', { defaultValue: 'Verification Status' })}
               </Text>
               <Text style={[styles.statusMessage, { color: colors.muted }]}>
                 {allVerificationsCompleted
                   ? t('home.verificationCompleteMessage', {
-                      defaultValue: 'Your identity has been successfully verified.',
+                      defaultValue: 'Your identity has been successfully verified. You now have full access to all services.',
                     })
-                  : t('home.verificationStatusSubtitle', {
+                  : t('home.continueVerification', {
                       defaultValue: 'Continue your verification process',
                     })}
               </Text>

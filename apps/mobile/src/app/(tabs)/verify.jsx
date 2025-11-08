@@ -309,10 +309,10 @@ export default function VerifyScreen() {
       >
         <View style={styles.pageHeader}>
           <Text style={[styles.pageTitle, { color: colors.text }]}>
-            {t('verify.identityTitle', { defaultValue: 'Identity Verification' })}
+            {t('verify.title', { defaultValue: 'Identity Verification' })}
           </Text>
           <Text style={[styles.pageSubtitle, { color: colors.muted }]}>
-            {t('verify.identitySubtitle', { defaultValue: 'Complete all steps to verify your identity' })}
+            {t('verify.subtitle', { defaultValue: 'Complete all steps to verify your identity' })}
           </Text>
         </View>
 

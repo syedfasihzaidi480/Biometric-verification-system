@@ -36,38 +36,45 @@ export const useLanguageStore = create((set, get) => ({
 }));
 
 // Translation helper function
-const translate = (key, language, params = {}) => {
-  const keys = key.split('.');
-  let translation = translations[language];
-  
+const resolvePath = (source, keys) => {
+  let current = source;
   for (const k of keys) {
-    if (translation && typeof translation === 'object') {
-      translation = translation[k];
+    if (current && typeof current === 'object' && k in current) {
+      current = current[k];
     } else {
-      // Fallback to English if translation not found
-      translation = translations.en;
-      for (const k2 of keys) {
-        if (translation && typeof translation === 'object') {
-          translation = translation[k2];
-        } else {
-          break;
-        }
-      }
-      break;
+      return undefined;
     }
   }
-  
-  if (typeof translation !== 'string') {
-    return key; // Return key if no translation found
-  }
-  
-  // Simple template replacement
-  let result = translation;
-  Object.keys(params).forEach(param => {
+  return current;
+};
+
+const applyParams = (text, params) => {
+  let result = text;
+  Object.keys(params).forEach((param) => {
     result = result.replace(new RegExp(`{{${param}}}`, 'g'), params[param]);
   });
-  
   return result;
+};
+
+const translate = (key, language, params = {}) => {
+  const { defaultValue, ...rest } = params;
+  const keys = key.split('.');
+
+  const localized = resolvePath(translations[language], keys);
+  if (typeof localized === 'string') {
+    return applyParams(localized, rest);
+  }
+
+  const fallback = resolvePath(translations.en, keys);
+  if (typeof fallback === 'string') {
+    return applyParams(fallback, rest);
+  }
+
+  if (typeof defaultValue === 'string') {
+    return applyParams(defaultValue, rest);
+  }
+
+  return key;
 };
 
 // Main hook for translations
