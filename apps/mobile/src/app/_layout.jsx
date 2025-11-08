@@ -87,14 +87,24 @@ export default function RootLayout() {
             </View>
           ) : (
             <>
-              <Stack screenOptions={{ headerShown: false }} initialRouteName="index">
-                <Stack.Screen name="index" />
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="index" options={{ headerShown: false }} />
                 <Stack.Screen name="onboarding" options={{ headerShown: false }} />
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="login" options={{ headerShown: false }} />
+                <Stack.Screen name="registration" options={{ headerShown: false }} />
                 <Stack.Screen name="settings" options={{ headerShown: false }} />
                 <Stack.Screen name="voice-verification" options={{ headerShown: false }} />
+                <Stack.Screen name="voice-enrollment" options={{ headerShown: false }} />
+                <Stack.Screen name="voice-login" options={{ headerShown: false }} />
                 <Stack.Screen name="face-verification" options={{ headerShown: false }} />
+                <Stack.Screen name="liveness-check" options={{ headerShown: false }} />
                 <Stack.Screen name="document-verification" options={{ headerShown: false }} />
+                <Stack.Screen name="document-upload" options={{ headerShown: false }} />
+                <Stack.Screen name="verification-submitted" options={{ headerShown: false }} />
+                <Stack.Screen name="privacy" options={{ headerShown: false }} />
+                <Stack.Screen name="profile" options={{ headerShown: false }} />
+                <Stack.Screen name="dashboard" options={{ headerShown: false }} />
               </Stack>
               <AuthModal />
             </>

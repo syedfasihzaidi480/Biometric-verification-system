@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Camera, RotateCw, CheckCircle } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useTranslation } from '@/i18n/useTranslation';
 import useUser from '@/utils/auth/useUser';
 import { apiFetch } from '@/utils/api';

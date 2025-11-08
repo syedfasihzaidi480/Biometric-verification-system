@@ -1,0 +1,42 @@
+{
+  "name": "create-anything-monorepo",
+  "private": true,
+  "workspaces": [
+    "mobile-app",
+    "dashboard",
+    "api",
+    "ml-service"
+  ],
+  "scripts": {
+    "dev": "echo Select a workspace: npm --workspace <name> run dev",
+    "dev:api": "npm --workspace api run dev",
+    "dev:mobile": "npm --workspace mobile-app run dev",
+    "dev:dashboard": "npm --workspace dashboard run dev",
+    "db:health": "node ./scripts/db-health.cjs",
+    "db:health:fix": "node ./scripts/db-health.cjs --fix",
+    "db:purge:dry": "node ./apps/web/scripts/purge-non-super-admin-users.cjs",
+    "db:purge:force": "node ./apps/web/scripts/purge-non-super-admin-users.cjs --force",
+    "lint": "npm -ws run lint",
+    "format": "npm -ws run format",
+    "test": "npm -ws run test --if-present",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "eslint": "^9.13.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-jsdoc": "^50.0.1",
+    "eslint-plugin-jsonc": "^2.12.2",
+    "eslint-plugin-unicorn": "^55.0.0",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "mongodb": "^6.20.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,md}": [
+      "prettier --write"
+    ]
+  }
+}

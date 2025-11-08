@@ -1,0 +1,72 @@
+{
+  "common": {
+    "next": "Next",
+    "back": "Back",
+    "continue": "Continue",
+    "save": "Save",
+    "cancel": "Cancel",
+    "loading": "Loading..."
+  },
+  "onboarding": {
+    "title": "Welcome",
+    "subtitle": "Secure identity with voice biometrics and liveness.",
+    "getStarted": "Get Started",
+    "selectLanguage": "Select your language",
+    "languagePrompt": "Choose one of the supported languages"
+  },
+  "registration": {
+    "title": "Create account",
+    "fullName": "Full name",
+    "fullNamePlaceholder": "John Doe",
+    "phoneNumber": "Phone number",
+    "phoneNumberPlaceholder": "+1 555 555 5555",
+    "email": "Email (optional)",
+    "emailPlaceholder": "john@example.com",
+    "dateOfBirth": "Date of birth",
+    "createAccount": "Create account",
+    "nameRequired": "Name is required",
+    "phoneRequired": "Phone number is required",
+    "validPhone": "Enter a valid phone number",
+    "validEmail": "Enter a valid email",
+    "terms": "By continuing, you consent to biometric processing."
+  },
+  "voiceEnrollment": {
+    "title": "Voice Enrollment",
+    "subtitle": "Record 3 samples saying the displayed phrase.",
+    "instructions": "Find a quiet place and speak clearly.",
+    "sample": "Sample",
+    "of": "of",
+    "startRecording": "Start recording",
+    "stopRecording": "Stop and upload",
+    "processing": "Processing...",
+    "recordAgain": "Record again",
+    "enrollmentComplete": "Enrollment complete",
+    "matchScore": "Match score: {{score}}%",
+    "qualityGood": "Quality looks good",
+    "qualityPoor": "Quality looks low, consider re-enrolling",
+    "sampleScript": "This is sample {{number}} of {{total}}"
+  },
+  "login": {
+    "title": "Voice Login",
+    "verify": "Verify"
+  },
+  "liveness": {
+    "title": "Liveness Check",
+    "instructions": "Center your face and follow the prompts.",
+    "start": "Start"
+  },
+  "document": {
+    "title": "Document Upload",
+    "subtitle": "Take a photo of your ID or upload from gallery.",
+    "upload": "Upload"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language"
+  },
+  "consent": {
+    "title": "Biometric Consent",
+    "message": "We process your voice and images to verify identity.",
+    "agree": "I agree"
+  }
+}

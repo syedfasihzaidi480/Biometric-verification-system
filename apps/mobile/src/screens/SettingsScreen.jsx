@@ -26,13 +26,31 @@ import {
 } from 'lucide-react-native';
 import { useTranslation } from '@/i18n/useTranslation';
 import { useAuth } from '@/utils/auth/useAuth';
-import * as Notifications from 'expo-notifications';
 import * as LocalAuthentication from 'expo-local-authentication';
+import Constants from 'expo-constants';
 import { PREF_KEYS, loadPreferences, setPreference } from '@/utils/preferences';
 import { useTheme } from '@/utils/theme/ThemeProvider';
 import { syncNotificationPreference } from '@/utils/notifications/syncPreference';
 import { resetOnboarding } from '@/utils/onboarding';
 import { apiFetchJson } from '@/utils/api';
+
+// Check if running in Expo Go
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// Lazy load notifications module only when needed
+let NotificationsModule = null;
+const getNotifications = async () => {
+  if (isExpoGo) return null;
+  if (NotificationsModule) return NotificationsModule;
+  
+  try {
+    NotificationsModule = await import('expo-notifications');
+    return NotificationsModule;
+  } catch (e) {
+    console.warn('[SettingsScreen] Could not load expo-notifications:', e.message);
+    return null;
+  }
+};
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -111,6 +129,18 @@ export default function SettingsScreen() {
 
   const handleToggleNotifications = async (value) => {
     if (value) {
+      // Lazy load notifications module
+      const Notifications = await getNotifications();
+      
+      if (!Notifications) {
+        Alert.alert(
+          'Notifications Unavailable',
+          'Push notifications require a development build. They are not available in Expo Go. Please create a development build to use this feature.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Notifications Disabled', 'Permission not granted. Enable notifications in system settings to receive alerts.');

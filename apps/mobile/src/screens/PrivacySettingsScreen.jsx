@@ -6,7 +6,7 @@ import { router } from 'expo-router';
 import { ArrowLeft, ExternalLink, ShieldCheck, Download, Trash2 } from 'lucide-react-native';
 import { PREF_KEYS, loadPreferences, setPreference } from '@/utils/preferences';
 import { apiFetchJson } from '@/utils/api';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { useTheme } from '@/utils/theme/ThemeProvider';
 import { useTranslation } from '@/i18n/useTranslation';
 

@@ -11,7 +11,7 @@ import {
   Linking,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -30,12 +30,30 @@ import useUser from "@/utils/auth/useUser";
 export default function VoiceEnrollmentScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { user } = useUser();
+  const { data: user } = useUser();
   const { userId: paramUserId, userName: paramUserName, dateOfBirth: paramDOB } = useLocalSearchParams();
-  const userId = paramUserId || user?.id;
+  
+  // Prefer user.id over user.auth_user_id for voice operations
+  const userId = paramUserId || user?.id || user?.auth_user_id;
   const userName = paramUserName || user?.name || 'User';
   const dateOfBirth = paramDOB || user?.date_of_birth || 'Unknown';
   const [upload, { loading: uploadLoading }] = useUpload();
+
+  // Show error if no userId is available
+  React.useEffect(() => {
+    if (!userId) {
+      Alert.alert(
+        t('common.error'),
+        'Please sign in to continue with voice enrollment.',
+        [
+          {
+            text: t('common.ok'),
+            onPress: () => router.replace('/'),
+          },
+        ]
+      );
+    }
+  }, [userId]);
 
   const [currentSample, setCurrentSample] = useState(1);
   const [totalSamples] = useState(3);

@@ -1,0 +1,11 @@
+{
+    "common": { "next": "Xiga", "back": "Dib", "continue": "Sii wad", "save": "Kaydi", "cancel": "Jooji", "loading": "Furaya..." },
+    "onboarding": { "title": "Soo dhowow", "subtitle": "Aqoonsi ammaan ah adigoo adeegsanaya cod iyo liveness.", "getStarted": "Bilow", "selectLanguage": "Dooro luqad", "languagePrompt": "Xulo luqaddaada" },
+    "registration": { "title": "Samee akoon", "fullName": "Magac buuxa", "fullNamePlaceholder": "Ali Ahmed", "phoneNumber": "Lambarka taleefanka", "phoneNumberPlaceholder": "+252 61 2345678", "email": "Email (ikhtiyaari)", "emailPlaceholder": "ali@example.com", "dateOfBirth": "Taariikh dhalasho", "createAccount": "Abuur akoon", "nameRequired": "Magac ayaa loo baahan yahay", "phoneRequired": "Taleefan ayaa loo baahan yahay", "validPhone": "Geli lambarka saxda ah", "validEmail": "Geli email sax ah", "terms": "Haddaad sii waddo, waad ogoshahay habaynta xogta biometric." },
+    "voiceEnrollment": { "title": "Diiwaangelinta codka", "subtitle": "Diiwaangeli 3 tijaabo.", "instructions": "Ku hadal si cad meel aan buuq lahayn.", "sample": "Tijaabo", "of": "ka mid ah", "startRecording": "Bilow duubista", "stopRecording": "Jooji oo dir", "processing": "Habaynta...", "recordAgain": "Dib u duub", "enrollmentComplete": "Diiwaangelin dhammaatay", "matchScore": "Natiijo: {{score}}%", "qualityGood": "Tayo fiican", "qualityPoor": "Tayo liidata", "sampleScript": "Tani waa tijaabo {{number}} ee {{total}}" },
+    "login": { "title": "Gelitaan cod", "verify": "Xaqiiji" },
+    "liveness": { "title": "Liveness", "instructions": "Dhex dhig wajiga oo raac tilmaamaha.", "start": "Bilow" },
+    "document": { "title": "Dokumenti", "subtitle": "Ka qaad sawirka aqoonsiga.", "upload": "Soo geli" },
+    "settings": { "title": "Dejinta", "language": "Luqad" },
+    "consent": { "title": "Oggolaanshaha biometric", "message": "Waxaan ka shaqaynaynaa codkaaga iyo sawirradaada si aan u xaqiijino aqoonsiga.", "agree": "Waan oggolahay" }
+}

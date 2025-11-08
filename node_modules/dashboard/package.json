@@ -1,0 +1,17 @@
+{
+  "name": "dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node -e \"console.log('Start dashboard dev later (Step 5)')\"",
+    "lint": "eslint src --ext .ts,.tsx || true",
+    "format": "prettier --write .",
+    "test": "node -e \"console.log('dashboard: tests placeholder')\""
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@types/react": "^18.3.10",
+    "@types/react-dom": "^18.3.0",
+    "@types/node": "^20.14.12"
+  }
+}

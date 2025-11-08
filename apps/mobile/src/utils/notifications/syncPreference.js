@@ -1,7 +1,25 @@
-import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { apiFetchJson } from '@/utils/api';
 import { useAuthStore } from '@/utils/auth/store';
+import Constants from 'expo-constants';
+
+// Check if running in Expo Go
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// Lazy load expo-notifications to avoid Expo Go issues
+let NotificationsModule = null;
+const getNotifications = async () => {
+  if (isExpoGo) return null;
+  if (NotificationsModule) return NotificationsModule;
+  
+  try {
+    NotificationsModule = await import('expo-notifications');
+    return NotificationsModule;
+  } catch (e) {
+    console.warn('[syncNotificationPreference] Could not load expo-notifications:', e.message);
+    return null;
+  }
+};
 
 // Best-effort sync; safe to call without awaiting in UI
 export async function syncNotificationPreference(enabled) {
@@ -9,11 +27,16 @@ export async function syncNotificationPreference(enabled) {
     let token = null;
     if (enabled) {
       try {
-        // On SDK 53+, projectId is auto-resolved when using EAS Updates. Fallback without.
-        const res = await Notifications.getExpoPushTokenAsync();
-        token = res?.data || null;
+        // Only load and use notifications in development builds, not Expo Go
+        const Notifications = await getNotifications();
+        if (Notifications) {
+          // On SDK 53+, projectId is auto-resolved when using EAS Updates. Fallback without.
+          const res = await Notifications.getExpoPushTokenAsync();
+          token = res?.data || null;
+        }
       } catch (e) {
-        // No token available (e.g., missing config); still sync enabled flag
+        // No token available (e.g., missing config or Expo Go); still sync enabled flag
+        console.warn('[syncNotificationPreference] Token fetch failed:', e.message);
         token = null;
       }
     }

@@ -139,37 +139,57 @@ export default function RegistrationScreen() {
         );
       }
     } catch (error) {
-      // Handle duplicates gracefully: if user/email already exists, try signing the user in
+      // Handle duplicates: if user/email/phone already exists, inform them to sign in instead
       console.error("Registration error:", error);
       const apiCode = error?.data?.error?.code;
-      const apiMessage = error?.data?.error?.message || error?.message;
+      const rawMessage = error?.data?.error?.message || error?.message || '';
+      const apiMessage = typeof rawMessage === 'string' ? rawMessage : '';
 
-      if (apiCode === 'EMAIL_EXISTS' || apiCode === 'USER_EXISTS') {
-        const identifier = formData.email.trim() || formData.phoneNumber.trim();
-        if (identifier && formData.password.trim()) {
-          try {
-            await signInWithCredentials({
-              identifier,
-              email: formData.email.trim() || undefined,
-              phone: formData.phoneNumber.trim() || undefined,
-              password: formData.password.trim(),
-              callbackUrl: '/',
-            });
-            // Proceed to next step after successful sign-in
-            router.push({
-              pathname: "/voice-enrollment",
-              params: {
-                // user id will come from session; still pass UI context
-                userName: formData.fullName.trim(),
-                dateOfBirth: formData.dateOfBirth,
-              },
-            });
-            return;
-          } catch (authError) {
-            console.warn('Auto sign-in after duplicate failed:', authError);
-            // Fall through to show message
+      const emailProvided = !!formData.email.trim();
+      const phoneProvided = !!formData.phoneNumber.trim();
+
+      const isDuplicate = (
+        apiCode === 'EMAIL_EXISTS' ||
+        apiCode === 'PHONE_EXISTS' ||
+        apiCode === 'USER_EXISTS' ||
+        (apiMessage.toLowerCase().includes('already exists')) ||
+        (apiMessage.toLowerCase().includes('duplicate'))
+      );
+
+      if (isDuplicate) {
+        // Determine which field to show in message.
+        // Priority: if only phone provided => phone number.
+        // If email provided and message/code points to email => email address.
+        // If both provided and ambiguous => account.
+  let duplicateField = 'account';
+
+        if (!emailProvided && phoneProvided) {
+          duplicateField = 'phone number';
+        } else if (emailProvided && !phoneProvided) {
+          duplicateField = 'email address';
+        } else if (emailProvided && phoneProvided) {
+          // Try to narrow by message or code
+          if (apiCode === 'EMAIL_EXISTS' || apiMessage.toLowerCase().includes('email')) {
+            duplicateField = 'email address';
+          } else if (apiCode === 'PHONE_EXISTS' || apiMessage.toLowerCase().includes('phone')) {
+            duplicateField = 'phone number';
+          } else {
+            duplicateField = 'account';
           }
+        } else {
+          // Neither provided? Should not happen (phone required) but fallback.
+          duplicateField = 'account';
         }
+
+        Alert.alert(
+          t('common.error'),
+          `An account with this ${duplicateField} already exists. Please sign in instead.`,
+          [
+            { text: 'Sign In', onPress: () => router.replace('/') },
+            { text: 'Cancel', style: 'cancel' }
+          ]
+        );
+        return;
       }
 
       // Surface a meaningful error to the user

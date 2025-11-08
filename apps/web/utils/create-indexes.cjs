@@ -37,44 +37,85 @@ async function main() {
 	const db = client.db(dbName);
 	console.log(`✅ Connected. Creating indexes in DB: ${dbName}`);
 
-	const create = async (col, index, opts) => {
+	const dropIndexIfExists = async (col, name) => {
 		try {
-			const name = await db.collection(col).createIndex(index, opts);
-			console.log(` - ${col}: created index ${name}`);
+			const indexes = await db.collection(col).indexes();
+			if (indexes.some((i) => i.name === name)) {
+				await db.collection(col).dropIndex(name);
+				console.log(` - ${col}: dropped index ${name}`);
+			}
 		} catch (e) {
-			console.warn(` - ${col}: index skipped: ${e.message}`);
+			console.warn(` - ${col}: drop index ${name} skipped: ${e.message}`);
 		}
 	};
 
-	// Users: phone and pension_number must be unique
-	await create('users', { phone: 1 }, { unique: true, name: 'uniq_phone' });
-	await create('users', { pension_number: 1 }, { unique: true, name: 'uniq_pension' });
-	await create('users', { auth_user_id: 1 }, { unique: true, sparse: true, name: 'uniq_auth_user_id' });
+	const ensureIndex = async (col, keys, opts) => {
+		const collection = db.collection(col);
+		try {
+			const indexes = await collection.indexes();
+			const existing = indexes.find((i) => i.name === opts.name);
+			if (existing) {
+				// Compare key spec and important options; if mismatch, drop and recreate
+				const keysMatch = JSON.stringify(existing.key) === JSON.stringify(keys);
+				const uniqueMatch = !!existing.unique === !!opts.unique;
+				const partialMatch = JSON.stringify(existing.partialFilterExpression || null) === JSON.stringify(opts.partialFilterExpression || null);
+				if (keysMatch && uniqueMatch && partialMatch) {
+					console.log(` - ${col}: index ${opts.name} up-to-date`);
+					return;
+				}
+				await collection.dropIndex(opts.name);
+				console.log(` - ${col}: dropped outdated index ${opts.name}`);
+			}
+			const name = await collection.createIndex(keys, opts);
+			console.log(` - ${col}: created index ${name}`);
+		} catch (e) {
+			console.warn(` - ${col}: ensure index ${opts.name} skipped: ${e.message}`);
+		}
+	};
+
+	// Users: phone and pension_number should be unique ONLY when present (non-null)
+	// Drop legacy indexes that enforced uniqueness on nulls
+	await dropIndexIfExists('users', 'uniq_phone');
+	await dropIndexIfExists('users', 'uniq_pension');
+	// Also drop any legacy email unique index on auth_users that didn't allow multiple nulls
+	await dropIndexIfExists('auth_users', 'email_1');
+
+	await ensureIndex('users', { phone: 1 }, {
+		unique: true,
+		name: 'uniq_phone_non_null',
+		partialFilterExpression: { phone: { $type: 'string' } },
+	});
+	await ensureIndex('users', { pension_number: 1 }, {
+		unique: true,
+		name: 'uniq_pension_non_null',
+		partialFilterExpression: { pension_number: { $type: 'string' } },
+	});
+	await ensureIndex('users', { auth_user_id: 1 }, { unique: true, sparse: true, name: 'uniq_auth_user_id' });
 
 	// Auth users: email unique, but allow multiple nulls via partial index
-	await create('auth_users', { email: 1 }, {
+	await ensureIndex('auth_users', { email: 1 }, {
 		unique: true,
 		partialFilterExpression: { email: { $type: 'string' } },
 		name: 'uniq_email_non_null'
 	});
 
 	// Auth accounts: userId unique per provider
-	await create('auth_accounts', { userId: 1, provider: 1 }, { unique: true, name: 'uniq_user_provider' });
+	await ensureIndex('auth_accounts', { userId: 1, provider: 1 }, { unique: true, name: 'uniq_user_provider' });
 
 	// Voice, documents, verification
-	await create('voice_profiles', { user_id: 1 }, { unique: true, name: 'uniq_voice_user' });
-	await create('documents', { user_id: 1, created_at: -1 }, { name: 'docs_user_created' });
-	await create('verification_requests', { user_id: 1, status: 1 }, { name: 'verif_user_status' });
-	await create('voice_enrollment_sessions', { user_id: 1, created_at: -1 }, { name: 'voice_session_user' });
-	await create('audit_logs', { user_id: 1, created_at: -1 }, { name: 'audit_user_created' });
+	await ensureIndex('voice_profiles', { user_id: 1 }, { unique: true, name: 'uniq_voice_user' });
+	await ensureIndex('documents', { user_id: 1, created_at: -1 }, { name: 'docs_user_created' });
+	await ensureIndex('verification_requests', { user_id: 1, status: 1 }, { name: 'verif_user_status' });
+	await ensureIndex('voice_enrollment_sessions', { user_id: 1, created_at: -1 }, { name: 'voice_session_user' });
+	await ensureIndex('audit_logs', { user_id: 1, created_at: -1 }, { name: 'audit_user_created' });
 
 	// Notification devices
-	await create('notification_devices', { token: 1 }, { unique: true, name: 'notif_token_unique' });
-	await create('notification_devices', { user_id: 1, updated_at: -1 }, { name: 'notif_user_updated' });
+	await ensureIndex('notification_devices', { token: 1 }, { unique: true, name: 'notif_token_unique' });
+	await ensureIndex('notification_devices', { user_id: 1, updated_at: -1 }, { name: 'notif_user_updated' });
 
 	// Notifications inbox
-	await create('notifications', { user_id: 1, created_at: -1 }, { name: 'notif_user_created' });
-	await create('notifications', { read: 1, created_at: -1 }, { name: 'notif_read_created' });
+	await ensureIndex('notifications', { user_id: 1, created_at: -1 }, { name: 'notif_user_created' });
+	await ensureIndex('notifications', { read: 1, created_at: -1 }, { name: 'notif_read_created' });
 
 	await client.close();
 	console.log('✅ Index creation complete.');

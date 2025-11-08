@@ -1,0 +1,11 @@
+{
+    "common": { "next": "Itti aanee", "back": "Duubatti", "continue": "Itti fufi", "save": "Kuusii", "cancel": "Haquu", "loading": "Fe'aa jira..." },
+    "onboarding": { "title": "Baga nagaan dhuftan", "subtitle": "Eenyummaa nageenyaan mirkaneessu sagalee fi liveness fayyadamuun.", "getStarted": "Jalqabi", "selectLanguage": "Afaan filadhaa", "languagePrompt": "Afaan deeggaramu filadhaa" },
+    "registration": { "title": "Akkaawuntii uumi", "fullName": "Maqaa guutuu", "fullNamePlaceholder": "Abdi Ibrahim", "phoneNumber": "Lakkoofsa bilbila", "phoneNumberPlaceholder": "+251 9 123 4567", "email": "Imeelii (filannoo)", "emailPlaceholder": "abdi@example.com", "dateOfBirth": "Guyyaa dhalootaa", "createAccount": "Akkaawuntii uumi", "nameRequired": "Maqaan barbaachisaadha", "phoneRequired": "Bilbilli barbaachisaadha", "validPhone": "Lakkoofsa sirrii galchi", "validEmail": "Imeelii sirrii galchi", "terms": "Itti fufuun, odeeffannoo biometric akka hojjetamu eeyyamta." },
+    "voiceEnrollment": { "title": "Galmee sagalee", "subtitle": "Fakkeenya sadii galmeessi.", "instructions": "Iddoo tasgabbaa'aa keessatti ifaan haasa'i.", "sample": "Fakkeenya", "of": "irraa", "startRecording": "Galmeessi jalqabi", "stopRecording": "Dhoorki fi ergi", "processing": "Adeemsifamaa jira...", "recordAgain": "Irra deebi'i", "enrollmentComplete": "Galmeen xumurame", "matchScore": "Bu'aa: {{score}}%", "qualityGood": "Kunoo qulqulluun gaarii", "qualityPoor": "Qulqulluun gadi aanaa", "sampleScript": "Kun fakkeenya {{number}} keessaa {{total}}" },
+    "login": { "title": "Seensa sagalee", "verify": "Mirkaneessi" },
+    "liveness": { "title": "Liveness", "instructions": "Fuula kee giddu galeessa godhiitii ajajawwan hordofi.", "start": "Jalqabi" },
+    "document": { "title": "Galmee fe'i", "subtitle": "Dokumantii eenyummaa kaasi yookiin fe'i.", "upload": "Fe'i" },
+    "settings": { "title": "Seerota", "language": "Afaan" },
+    "consent": { "title": "Hayyama biometric", "message": "Eenyummaa mirkaneessuuf sagalee fi suuraa siif hojjenna.", "agree": "Nan hayyame" }
+}

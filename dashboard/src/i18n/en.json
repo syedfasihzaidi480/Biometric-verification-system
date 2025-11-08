@@ -1,0 +1,9 @@
+{
+  "common": {"logout": "Logout"},
+  "nav": {"login": "Login", "pending": "Pending", "settings": "Settings", "activity": "Activity"},
+  "login": {"title": "Admin Login"},
+  "pending": {"title": "Pending Verifications"},
+  "details": {"title": "Verification Details"},
+  "settings": {"title": "Admin Settings"},
+  "activity": {"title": "Activity Log"}
+}

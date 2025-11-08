@@ -262,14 +262,22 @@ export async function PATCH(request, { params }) {
 
     // Reflect approval status on the user record so clients (mobile/web) see the change
     try {
+      const userUpdate = {
+        admin_approved: action === 'approve',
+        updated_at: now,
+      };
+
+      if (action === 'approve') {
+        userUpdate.voice_verified = true;
+        userUpdate.face_verified = true;
+        userUpdate.document_verified = true;
+        userUpdate.profile_completed = true;
+        userUpdate.verification_completed_at = now;
+      }
+
       await users.updateOne(
         { id: verification.user_id },
-        {
-          $set: {
-            admin_approved: action === 'approve',
-            updated_at: now,
-          }
-        }
+        { $set: userUpdate }
       );
     } catch (userUpdateError) {
       console.error('Failed to update user admin_approved status:', userUpdateError);
@@ -298,6 +306,10 @@ export async function PATCH(request, { params }) {
         action: 'USER_STATUS_UPDATED',
         details: {
           admin_approved: action === 'approve',
+          voice_verified: action === 'approve' ? true : undefined,
+          face_verified: action === 'approve' ? true : undefined,
+          document_verified: action === 'approve' ? true : undefined,
+          profile_completed: action === 'approve' ? true : undefined,
           source: 'ADMIN_VERIFICATION_PATCH',
           verificationId: id,
           adminId: adminId,
@@ -351,7 +363,11 @@ export async function PATCH(request, { params }) {
         },
         user: {
           id: verification.user_id,
-          admin_approved: action === 'approve'
+          admin_approved: action === 'approve',
+          voice_verified: action === 'approve' ? true : undefined,
+          face_verified: action === 'approve' ? true : undefined,
+          document_verified: action === 'approve' ? true : undefined,
+          profile_completed: action === 'approve' ? true : undefined,
         },
         message: `Verification ${action === 'approve' ? 'approved' : 'rejected'} successfully`,
         next_steps: action === 'approve' ? ['payment_release', 'user_notification'] : ['user_notification']

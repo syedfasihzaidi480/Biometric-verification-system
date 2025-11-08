@@ -1,0 +1,11 @@
+{
+  "common": {"next": "ቀጣይ", "back": "ወደ ኋላ", "continue": "ቀጥል", "save": "አስቀምጥ", "cancel": "ሰርዝ", "loading": "በመጫን ላይ..."},
+  "onboarding": {"title": "እንኳን በደህና መጡ", "subtitle": "የድምጽ ባዮሜትሪክ እና ሊቭነስ ማረጋገጥ.", "getStarted": "ጀምር", "selectLanguage": "ቋንቋ ይምረጡ", "languagePrompt": "የሚወዱትን ቋንቋ ይምረጡ"},
+  "registration": {"title": "መለያ ፍጠር", "fullName": "ሙሉ ስም", "fullNamePlaceholder": "Abebe Kebede", "phoneNumber": "ስልክ ቁጥር", "phoneNumberPlaceholder": "+251 9 123 4567", "email": "ኢሜል (አማራጭ)", "emailPlaceholder": "abebe@example.com", "dateOfBirth": "የትውልድ ቀን", "createAccount": "መለያ ፍጠር", "nameRequired": "ስም ያስፈልጋል", "phoneRequired": "ስልክ ያስፈልጋል", "validPhone": "ጥሩ ስልክ ያስገቡ", "validEmail": "ጥሩ ኢሜል ያስገቡ", "terms": "መቀጠል በማድረግ ባዮሜትሪክ ሂደትን ታረጋግጣሉ።"},
+  "voiceEnrollment": {"title": "የድምጽ መመዝገብ", "subtitle": "3 ናሙናዎችን ይመዝገቡ.", "instructions": "በጸጥ ቦታ ግልጽ ተናገሩ.", "sample": "ናሙና", "of": "ከ", "startRecording": "መመዝገብ ጀምር", "stopRecording": "አቁም እና ላክ", "processing": "በማስሄድ ላይ...", "recordAgain": "እንደገና መመዝገብ", "enrollmentComplete": "መመዝገብ ተጠናቀቀ", "matchScore": "ውጤት: {{score}}%", "qualityGood": "ጥራት ጥሩ ነው", "qualityPoor": "ጥራት ዝቅተኛ ነው", "sampleScript": "ይህ ናሙና {{number}} ከ {{total}} ነው"},
+  "login": {"title": "በድምጽ መግባት", "verify": "ማረጋገጥ"},
+  "liveness": {"title": "ሊቭነስ", "instructions": "ፊትዎን ማዕከል አድርጉ እና መመሪያዎችን ይከተሉ.", "start": "ጀምር"},
+  "document": {"title": "ሰነድ መጫን", "subtitle": "የመታወቂያ ስእል ይውሰዱ ወይም ይጫኑ.", "upload": "ጫን"},
+  "settings": {"title": "ማቀናበሪያ", "language": "ቋንቋ"},
+  "consent": {"title": "ባዮሜትሪክ ፍቃድ", "message": "የመለያ ማረጋገጥ ለማድረግ ድምጅ እና ምስሎች እንሠራ.", "agree": "ተስማምቻለሁ"}
+}

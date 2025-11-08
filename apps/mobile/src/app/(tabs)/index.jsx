@@ -20,11 +20,14 @@ import { useTranslation } from '@/i18n/useTranslation';
 import { useTheme } from '@/utils/theme/ThemeProvider';
 import {
   CheckCircle,
-  Clock,
   AlertCircle,
   Fingerprint,
   HelpCircle,
   PhoneCall,
+  ShieldCheck,
+  Mic,
+  Camera,
+  FileText,
 } from 'lucide-react-native';
 
 const INPS_LOGO = require('../../../assets/images/icon.png');
@@ -160,7 +163,31 @@ export default function HomeScreen() {
     );
   }
 
-  const hasVerificationSession = profile?.voice_verified || profile?.face_verified || profile?.document_verified;
+  const verificationSteps = [
+    {
+      id: 'voice',
+      title: t('home.voiceVerification'),
+      subtitle: t('home.voiceVerificationSubtitle'),
+      verified: Boolean(profile?.voice_verified),
+      icon: Mic,
+    },
+    {
+      id: 'face',
+      title: t('home.faceLiveness'),
+      subtitle: t('home.faceLivenessSubtitle'),
+      verified: Boolean(profile?.face_verified),
+      icon: Camera,
+    },
+    {
+      id: 'document',
+      title: t('home.documentVerification'),
+      subtitle: t('home.documentVerificationSubtitle'),
+      verified: Boolean(profile?.document_verified),
+      icon: FileText,
+    },
+  ];
+
+  const allVerificationsCompleted = verificationSteps.every((step) => step.verified);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
@@ -177,101 +204,65 @@ export default function HomeScreen() {
             {t('home.welcomeBack', { name: profile?.name || authUser?.name || 'User' })}
           </Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>
-            {t('home.checkStatusBelow')}
+            {allVerificationsCompleted 
+              ? t('home.allVerificationsComplete', { defaultValue: 'Your account is fully verified' })
+              : t('home.checkStatusBelow')}
           </Text>
         </View>
 
         {/* Verification Status Card */}
         <View style={[styles.statusCard, { backgroundColor: colors.surface }]}> 
           <View style={styles.statusHeader}>
-            <View style={styles.shieldIcon}>
-              <Text style={styles.shieldEmoji}>🛡️</Text>
+            <View style={[styles.shieldIcon, { backgroundColor: '#EEF2FF' }]}> 
+              <ShieldCheck size={24} color="#2563EB" />
             </View>
-            <Text style={[styles.statusTitle, { color: colors.text }]}>{t('home.verificationStatus')}</Text>
+            <View style={styles.statusTextGroup}>
+              <Text style={[styles.statusTitle, { color: colors.text }]}>
+                {t('home.verificationStatusTitle', { defaultValue: 'Verification Status' })}
+              </Text>
+              <Text style={[styles.statusMessage, { color: colors.muted }]}>
+                {allVerificationsCompleted
+                  ? t('home.verificationCompleteMessage', {
+                      defaultValue: 'Your identity has been successfully verified.',
+                    })
+                  : t('home.verificationStatusSubtitle', {
+                      defaultValue: 'Continue your verification process',
+                    })}
+              </Text>
+            </View>
           </View>
-          <Text style={[styles.statusMessage, { color: colors.muted }]}>
-            {hasVerificationSession 
-              ? t('home.continueVerification')
-              : t('home.noSession')}
-          </Text>
         </View>
 
         {/* Verification Steps */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('home.verificationSteps')}</Text>
-          
-          {/* Voice Verification */}
-          <TouchableOpacity 
-            style={[styles.verificationCard, { backgroundColor: colors.surface }]}
-            onPress={() => router.push('/(tabs)/verify')}
-          >
-            <View style={styles.cardIcon}>
-              <Text style={styles.iconEmoji}>🎙️</Text>
-            </View>
-            <View style={styles.cardContent}>
-        <Text style={[styles.cardTitle, { color: colors.text }]}>{t('home.voiceVerification')}</Text>
-        <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{t('home.voiceVerificationSubtitle')}</Text>
-            </View>
-            {profile?.voice_verified ? (
-              <CheckCircle size={24} color="#10B981" />
-            ) : (
-              <AlertCircle size={24} color="#F59E0B" />
-            )}
-          </TouchableOpacity>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t('home.verificationSteps', { defaultValue: 'Verification Steps' })}
+          </Text>
 
-          {/* Face Liveness */}
-          <TouchableOpacity 
-            style={[styles.verificationCard, { backgroundColor: colors.surface }]}
-            onPress={() => router.push('/(tabs)/verify')}
-          >
-            <View style={styles.cardIcon}>
-              <Text style={styles.iconEmoji}>🤳</Text>
-            </View>
-            <View style={styles.cardContent}>
-        <Text style={[styles.cardTitle, { color: colors.text }]}>{t('home.faceLiveness')}</Text>
-        <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{t('home.faceLivenessSubtitle')}</Text>
-            </View>
-            {profile?.face_verified ? (
-              <CheckCircle size={24} color="#10B981" />
-            ) : (
-              <AlertCircle size={24} color="#F59E0B" />
-            )}
-          </TouchableOpacity>
+          {verificationSteps.map((step) => {
+            const StepIcon = step.icon;
+            const statusColor = step.verified ? '#10B981' : '#F59E0B';
+            const StatusIcon = step.verified ? CheckCircle : AlertCircle;
 
-          {/* Document Verification */}
-          <TouchableOpacity 
-            style={[styles.verificationCard, { backgroundColor: colors.surface }]}
-            onPress={() => router.push('/(tabs)/verify')}
-          >
-            <View style={styles.cardIcon}>
-              <Text style={styles.iconEmoji}>📄</Text>
-            </View>
-            <View style={styles.cardContent}>
-        <Text style={[styles.cardTitle, { color: colors.text }]}>{t('home.documentVerification')}</Text>
-        <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{t('home.documentVerificationSubtitle')}</Text>
-            </View>
-            {profile?.document_verified ? (
-              <CheckCircle size={24} color="#10B981" />
-            ) : (
-              <AlertCircle size={24} color="#F59E0B" />
-            )}
-          </TouchableOpacity>
+            return (
+              <TouchableOpacity
+                key={step.id}
+                style={[styles.verificationCard, { backgroundColor: colors.surface }]}
+                onPress={() => router.push('/(tabs)/verify')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.cardIcon}>
+                  <StepIcon size={22} color="#2563EB" />
+                </View>
+                <View style={styles.cardContent}>
+                  <Text style={[styles.cardTitle, { color: colors.text }]}>{step.title}</Text>
+                  <Text style={[styles.cardSubtitle, { color: colors.muted }]}>{step.subtitle}</Text>
+                </View>
+                <StatusIcon size={24} color={statusColor} />
+              </TouchableOpacity>
+            );
+          })}
         </View>
-
-        {/* Next Steps */}
-        {!profile?.profile_completed && (
-          <View style={styles.nextStepsSection}>
-            <Text style={[styles.nextStepsTitle, { color: colors.text }]}>{t('home.nextSteps')}</Text>
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={() => router.push('/(tabs)/register')}
-            >
-              <Text style={styles.primaryButtonText}>
-                {t('home.completeProfileRegistration')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </ScrollView>
     </View>
   );
@@ -360,7 +351,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
-    marginBottom: 28,
+    marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -370,24 +361,23 @@ const styles = StyleSheet.create({
   statusHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
   },
   shieldIcon: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
-  shieldEmoji: {
-    fontSize: 20,
+  statusTextGroup: {
+    flex: 1,
   },
   statusTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1F2937',
+    marginBottom: 4,
   },
   statusMessage: {
     fontSize: 14,
@@ -411,6 +401,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -421,13 +413,10 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F3F4FF',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-  },
-  iconEmoji: {
-    fontSize: 24,
   },
   cardContent: {
     flex: 1,

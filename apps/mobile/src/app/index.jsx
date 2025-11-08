@@ -35,6 +35,6 @@ export default function Index() {
     );
   }
 
-  // Redirect to onboarding if user hasn't seen it, otherwise go to tabs
-  return <Redirect href={showOnboarding ? "/onboarding" : "/(tabs)"} />;
+  // Redirect to onboarding if user hasn't seen it, otherwise go to tabs home screen
+  return <Redirect href={showOnboarding ? "/onboarding" : "/(tabs)/"} />;
 }

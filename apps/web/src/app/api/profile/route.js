@@ -24,9 +24,7 @@ export async function GET() {
         id: newUserId,
         auth_user_id: authUserId,
         name: session.user.name || '',
-        email: session.user.email || '',
-        phone: null,
-        date_of_birth: null,
+        email: (session.user.email ? String(session.user.email).toLowerCase() : ''),
         preferred_language: 'en',
         role: 'user',
         profile_completed: false,
@@ -147,10 +145,8 @@ export async function PUT(request) {
         id: newUserId,
         auth_user_id: authUserId,
         name: userData.name || '',
-  // Prefer explicitly provided email (already normalized to lowercase); fall back to session email
-  email: userData.email || (session?.user?.email ? String(session.user.email).toLowerCase() : ''),
-        phone: userData.phone || null,
-        date_of_birth: userData.date_of_birth || null,
+        // Prefer explicitly provided email (already normalized to lowercase); fall back to session email
+        email: userData.email || (session?.user?.email ? String(session.user.email).toLowerCase() : ''),
         preferred_language: userData.preferred_language || 'en',
         role: 'user',
         profile_completed: userData.profile_completed ?? false,
@@ -162,6 +158,9 @@ export async function PUT(request) {
         created_at: now,
         updated_at: now,
       };
+      // Only include optional fields if actually provided to avoid indexing nulls
+      if (userData.phone) newUserDoc.phone = userData.phone;
+      if (userData.date_of_birth) newUserDoc.date_of_birth = userData.date_of_birth;
       
       console.log('[Profile PUT] Creating new user:', JSON.stringify(newUserDoc, null, 2));
       await users.insertOne(newUserDoc);

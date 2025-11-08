@@ -1,0 +1,11 @@
+{
+    "common": { "next": "Suivant", "back": "Retour", "continue": "Continuer", "save": "Enregistrer", "cancel": "Annuler", "loading": "Chargement..." },
+    "onboarding": { "title": "Bienvenue", "subtitle": "Identité sécurisée avec biométrie vocale et preuve de vie.", "getStarted": "Commencer", "selectLanguage": "Choisissez votre langue", "languagePrompt": "Sélectionnez une langue" },
+    "registration": { "title": "Créer un compte", "fullName": "Nom complet", "fullNamePlaceholder": "Jean Dupont", "phoneNumber": "Numéro de téléphone", "phoneNumberPlaceholder": "+33 6 12 34 56 78", "email": "Email (optionnel)", "emailPlaceholder": "jean@example.com", "dateOfBirth": "Date de naissance", "createAccount": "Créer le compte", "nameRequired": "Le nom est requis", "phoneRequired": "Le téléphone est requis", "validPhone": "Entrez un numéro valide", "validEmail": "Entrez un email valide", "terms": "En continuant, vous consentez au traitement biométrique." },
+    "voiceEnrollment": { "title": "Enrôlement vocal", "subtitle": "Enregistrez 3 échantillons.", "instructions": "Parlez clairement dans un endroit calme.", "sample": "Échantillon", "of": "sur", "startRecording": "Commencer l'enregistrement", "stopRecording": "Arrêter et envoyer", "processing": "Traitement...", "recordAgain": "Réenregistrer", "enrollmentComplete": "Enrôlement terminé", "matchScore": "Score: {{score}}%", "qualityGood": "Qualité bonne", "qualityPoor": "Qualité faible", "sampleScript": "Ceci est l'échantillon {{number}} sur {{total}}" },
+    "login": { "title": "Connexion vocale", "verify": "Vérifier" },
+    "liveness": { "title": "Preuve de vie", "instructions": "Cadrez votre visage et suivez les instructions.", "start": "Démarrer" },
+    "document": { "title": "Téléversement de document", "subtitle": "Prenez une photo de votre pièce d'identité.", "upload": "Téléverser" },
+    "settings": { "title": "Paramètres", "language": "Langue" },
+    "consent": { "title": "Consentement biométrique", "message": "Nous traitons votre voix et vos images pour vérifier l'identité.", "agree": "J'accepte" }
+}
