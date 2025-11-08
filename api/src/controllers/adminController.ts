@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { listDeletedUsers } from '../store/usersStore.js';
 
 type RequestItem = {
   id: string;
@@ -12,6 +13,11 @@ type RequestItem = {
 };
 
 const store: { requests: RequestItem[] } = { requests: [] };
+
+export async function listDeletedAccounts(_req: Request, res: Response) {
+  const deleted = listDeletedUsers();
+  return res.json({ success: true, data: { deletedUsers: deleted } });
+}
 
 export async function listRequests(_req: Request, res: Response) {
   return res.json({ success: true, data: { requests: store.requests } });

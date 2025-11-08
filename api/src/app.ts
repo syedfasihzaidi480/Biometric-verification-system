@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import authRoutes from './routes/auth.js';
 import verifyRoutes from './routes/verify.js';
 import adminRoutes from './routes/admin.js';
+import accountRoutes from './routes/account.js';
 
 export function createApp() {
   const app = express();
@@ -18,6 +19,7 @@ export function createApp() {
   });
 
   app.use('/api/auth', authRoutes);
+  app.use('/api/account', accountRoutes);
   app.use('/api', verifyRoutes);
   app.use('/api/admin', adminRoutes);
 
