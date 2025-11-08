@@ -48,6 +48,7 @@ export async function POST(request) {
     const sessionsCollection = db.collection('voice_enrollment_sessions');
     const voiceProfiles = db.collection('voice_profiles');
     const auditLogs = db.collection('audit_logs');
+    const voiceSamples = db.collection('voice_enrollment_samples');
 
     // Try to find user by auth_user_id first (from session), then by id (from registration)
     let user = await users.findOne({ auth_user_id: userId });
@@ -142,6 +143,25 @@ export async function POST(request) {
         }
       }, { status: 500 });
     }
+
+    // Store audio sample in MongoDB
+    const sampleId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+    const audioSampleDoc = {
+      id: sampleId,
+      user_id: user.id,
+      session_id: session.id,
+      sample_number: session.samples_recorded + 1,
+      audio_url: uploadResult.url,
+      audio_buffer: audioBuffer ? audioBuffer.toString('base64') : base64, // Store as base64
+      mime_type: contentType.includes('application/json') ? 'audio/webm' : 'audio/wav', // You can adjust based on actual file type
+      file_size: audioBuffer ? audioBuffer.length : Buffer.from(base64, 'base64').length,
+      ml_model_id: mlResponse.data.modelId,
+      quality_score: mlResponse.data.qualityScore,
+      created_at: new Date().toISOString(),
+    };
+    
+    await voiceSamples.insertOne(audioSampleDoc);
+    console.log('[VOICE_ENROLL] Audio sample stored in MongoDB:', sampleId);
 
     // Update session with new sample
     const samplesRequired = session.samples_required ?? 3;

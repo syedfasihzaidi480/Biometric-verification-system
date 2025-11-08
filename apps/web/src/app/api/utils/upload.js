@@ -1,18 +1,41 @@
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import { uploadToCloudinary } from './cloudinary.js';
 
 /**
- * Upload file with fallback to local storage
+ * Upload file with Cloudinary as primary, local storage as fallback
  * Supports: buffer, base64, or URL
  */
 async function upload({
   url,
   buffer,
-  base64
+  base64,
+  folder = 'biometric-verification'
 }) {
+  // Try Cloudinary first
+  const cloudinaryResult = await uploadToCloudinary({
+    buffer,
+    base64,
+    url,
+    folder,
+    resourceType: 'auto'
+  });
+
+  if (!cloudinaryResult.error && cloudinaryResult.url) {
+    console.log('[UPLOAD] Cloudinary upload successful');
+    return {
+      url: cloudinaryResult.url,
+      mimeType: cloudinaryResult.mimeType || null,
+      publicId: cloudinaryResult.publicId,
+      provider: 'cloudinary'
+    };
+  }
+
+  console.warn('[UPLOAD] Cloudinary failed, trying external service:', cloudinaryResult.error);
+
   try {
-    // Try external upload service first
+    // Try external upload service as secondary option
     const response = await fetch(`https://api.createanything.com/v0/upload`, {
       method: "POST",
       headers: {
@@ -27,9 +50,11 @@ async function upload({
       
       // Validate the response has a valid URL
       if (data.url && data.url !== 'null' && data.url !== 'undefined') {
+        console.log('[UPLOAD] External service upload successful');
         return {
           url: data.url,
-          mimeType: data.mimeType || null
+          mimeType: data.mimeType || null,
+          provider: 'external'
         };
       }
     }
@@ -40,7 +65,11 @@ async function upload({
   }
 
   // Fallback to local storage
-  return await uploadToLocalStorage({ url, buffer, base64 });
+  const localResult = await uploadToLocalStorage({ url, buffer, base64 });
+  return {
+    ...localResult,
+    provider: 'local'
+  };
 }
 
 /**

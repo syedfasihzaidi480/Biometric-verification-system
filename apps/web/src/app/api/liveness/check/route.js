@@ -66,6 +66,7 @@ export async function POST(request) {
     const users = db.collection('users');
     const verificationRequests = db.collection('verification_requests');
     const auditLogs = db.collection('audit_logs');
+    const faceImages = db.collection('face_liveness_images');
 
     console.log('[LIVENESS_CHECK] Looking up user with userId:', userId);
 
@@ -136,6 +137,27 @@ export async function POST(request) {
     const livenessScore = mlResponse.data.livenessScore;
     const isLive = mlResponse.data.isLive;
     const threshold = 0.7; // Configurable threshold
+
+    // Store facial liveness image in MongoDB
+    const faceImageId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+    const faceImageDoc = {
+      id: faceImageId,
+      user_id: user.id,
+      image_url: uploadResult.url,
+      image_buffer: imageBuffer ? imageBuffer.toString('base64') : base64, // Store as base64
+      mime_type: contentType.includes('application/json') ? 'image/jpeg' : 'image/jpeg', // Default to jpeg
+      file_size: imageBuffer ? imageBuffer.length : Buffer.from(base64, 'base64').length,
+      liveness_score: livenessScore,
+      is_live: isLive,
+      threshold: threshold,
+      image_quality: mlResponse.data.imageQuality,
+      face_detected: mlResponse.data.faceDetected,
+      reasons: mlResponse.data.reasons || [],
+      created_at: new Date().toISOString(),
+    };
+    
+    await faceImages.insertOne(faceImageDoc);
+    console.log('[LIVENESS_CHECK] Face image stored in MongoDB:', faceImageId);
 
     // Create or update verification request
     const nowIso = new Date().toISOString();

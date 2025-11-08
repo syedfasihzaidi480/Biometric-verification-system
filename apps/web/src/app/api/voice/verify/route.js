@@ -44,6 +44,7 @@ export async function POST(request) {
     const users = db.collection('users');
     const voiceProfiles = db.collection('voice_profiles');
     const auditLogs = db.collection('audit_logs');
+    const voiceVerificationSamples = db.collection('voice_verification_samples');
 
     console.log('[VOICE_VERIFY] Looking up user with userId:', userId);
 
@@ -121,6 +122,26 @@ export async function POST(request) {
     const matchScore = mlResponse.data.matchScore;
     const isMatch = mlResponse.data.isMatch;
     const threshold = 0.75; // Configurable threshold
+
+    // Store verification audio sample in MongoDB
+    const sampleId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+    const verificationSampleDoc = {
+      id: sampleId,
+      user_id: user.id,
+      voice_profile_id: voiceProfile.id || voiceProfile._id?.toString(),
+      audio_url: uploadResult.url,
+      audio_buffer: audioBuffer ? audioBuffer.toString('base64') : base64, // Store as base64
+      mime_type: contentType.includes('application/json') ? 'audio/webm' : 'audio/wav',
+      file_size: audioBuffer ? audioBuffer.length : Buffer.from(base64, 'base64').length,
+      match_score: matchScore,
+      is_match: isMatch,
+      threshold: threshold,
+      quality_score: mlResponse.data.qualityScore,
+      created_at: new Date().toISOString(),
+    };
+    
+    await voiceVerificationSamples.insertOne(verificationSampleDoc);
+    console.log('[VOICE_VERIFY] Verification audio sample stored in MongoDB:', sampleId);
 
     // Update voice profile with latest match score (use user.id for MongoDB operations)
     await voiceProfiles.updateOne(

@@ -37,6 +37,8 @@ export async function POST(request) {
     let documentType = 'id_card';
     let uploadResult = null;
     let uploadedFileMeta = { mimeType: null, fileName: null };
+    let documentBuffer = null;
+    let documentBase64 = null;
 
     // Support both multipart/form-data and JSON bodies (base64 or URL)
     const contentType = request.headers.get('content-type') || '';
@@ -57,6 +59,7 @@ export async function POST(request) {
       }
 
       if (body.documentBase64) {
+        documentBase64 = body.documentBase64;
         uploadResult = await upload({ base64: body.documentBase64 });
         uploadedFileMeta = {
           mimeType: mimeType || uploadResult?.mimeType || null,
@@ -113,7 +116,7 @@ export async function POST(request) {
       }
 
       // Upload document file
-      const documentBuffer = Buffer.from(await documentFile.arrayBuffer());
+      documentBuffer = Buffer.from(await documentFile.arrayBuffer());
       uploadResult = await upload({ buffer: documentBuffer });
       uploadedFileMeta = {
         mimeType: documentFile.type || uploadResult?.mimeType || null,
@@ -126,6 +129,7 @@ export async function POST(request) {
     const documents = db.collection('documents');
     const verificationRequests = db.collection('verification_requests');
     const auditLogs = db.collection('audit_logs');
+    const documentImages = db.collection('document_images');
 
     let user = await users.findOne({ auth_user_id: authUserId });
     if (!user) {
@@ -201,6 +205,28 @@ export async function POST(request) {
         }
       }, { status: 500 });
     }
+
+    // Store document image in MongoDB
+    const documentImageId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
+    const documentImageDoc = {
+      id: documentImageId,
+      user_id: user.id,
+      document_type: documentType,
+      image_url: uploadResult.url,
+      image_buffer: documentBuffer ? documentBuffer.toString('base64') : documentBase64, // Store as base64
+      mime_type: uploadedFileMeta.mimeType,
+      file_name: uploadedFileMeta.fileName,
+      file_size: documentBuffer ? documentBuffer.length : (documentBase64 ? Buffer.from(documentBase64, 'base64').length : 0),
+      extracted_text: mlResponse.data.extractedText || null,
+      tamper_detected: mlResponse.data.tamperDetected || false,
+      ocr_confidence: mlResponse.data.ocrConfidence || 0,
+      document_quality: mlResponse.data.documentQuality || 0,
+      face_region_detected: mlResponse.data.faceRegionDetected || false,
+      created_at: new Date().toISOString(),
+    };
+    
+    await documentImages.insertOne(documentImageDoc);
+    console.log('[DOCUMENT_UPLOAD] Document image stored in MongoDB:', documentImageId);
 
   let document;
   let verificationRequest;

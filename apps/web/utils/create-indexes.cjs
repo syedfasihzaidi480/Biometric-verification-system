@@ -109,6 +109,18 @@ async function main() {
 	await ensureIndex('voice_enrollment_sessions', { user_id: 1, created_at: -1 }, { name: 'voice_session_user' });
 	await ensureIndex('audit_logs', { user_id: 1, created_at: -1 }, { name: 'audit_user_created' });
 
+	// Voice enrollment and verification samples
+	await ensureIndex('voice_enrollment_samples', { user_id: 1, created_at: -1 }, { name: 'voice_enroll_samples_user' });
+	await ensureIndex('voice_enrollment_samples', { session_id: 1, sample_number: 1 }, { name: 'voice_enroll_samples_session' });
+	await ensureIndex('voice_verification_samples', { user_id: 1, created_at: -1 }, { name: 'voice_verify_samples_user' });
+	await ensureIndex('voice_verification_samples', { voice_profile_id: 1, created_at: -1 }, { name: 'voice_verify_samples_profile' });
+
+	// Face liveness images and document images
+	await ensureIndex('face_liveness_images', { user_id: 1, created_at: -1 }, { name: 'face_images_user' });
+	await ensureIndex('face_liveness_images', { is_live: 1, created_at: -1 }, { name: 'face_images_liveness' });
+	await ensureIndex('document_images', { user_id: 1, created_at: -1 }, { name: 'doc_images_user' });
+	await ensureIndex('document_images', { document_type: 1, created_at: -1 }, { name: 'doc_images_type' });
+
 	// Notification devices
 	await ensureIndex('notification_devices', { token: 1 }, { unique: true, name: 'notif_token_unique' });
 	await ensureIndex('notification_devices', { user_id: 1, updated_at: -1 }, { name: 'notif_user_updated' });
