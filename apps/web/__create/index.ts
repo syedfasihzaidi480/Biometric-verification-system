@@ -48,11 +48,13 @@ async function initializePersistence() {
     mongoDb = mongoClient.db(process.env.MONGODB_DB || 'auth');
     const { default: MongoAdapter } = await import('./mongo-adapter');
     adapter = MongoAdapter(mongoDb);
-  } else {
+  } else if (process.env.DATABASE_URL?.trim()) {
     const pool = new Pool({
       connectionString: process.env.DATABASE_URL,
     });
     adapter = NeonAdapter(pool);
+  } else {
+    throw new Error('No database connection configured. Please set either MONGODB_URI or DATABASE_URL environment variable.');
   }
 }
 
