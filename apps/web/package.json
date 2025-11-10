@@ -4,7 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "react-router dev --host --port 4000",
-		"build": "node ./scripts/prebuild-prepare-routes.cjs && react-router build && node ./scripts/postbuild-copy-routes.cjs",
+		"build": "node ./scripts/compile-api-routes.cjs && react-router build",
 		"start": "react-router-serve ./build/server/index.js",
 		"cleanup:preserve-superadmin": "node ./scripts/cleanup-preserve-super-admin.cjs",
 		"cleanup:purge:dry": "node ./scripts/purge-non-super-admin-users.cjs",
@@ -95,6 +95,7 @@
 		"autoprefixer": "^10.4.21",
 		"babel-plugin-react-require": "^4.0.3",
 		"concat-map": "^0.0.2",
+		"esbuild": "^0.27.0",
 		"eslint": "^8.57.1",
 		"eslint-plugin-import": "^2.32.0",
 		"fast-glob": "^3.3.3",
