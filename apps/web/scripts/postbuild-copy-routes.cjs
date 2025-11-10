@@ -9,6 +9,10 @@ const srcRoot = path.join(projectRoot, 'src');
 const buildSrcRoot = path.join(projectRoot, 'build', 'server', 'src');
 const transformableExtensions = new Set(['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx']);
 const aliasExtensions = ['.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.json'];
+const staticAliasMap = {
+  '@auth/create': '__create/@auth/create.js',
+};
+const processedAliasTargets = new Set();
 
 function toPosix(value) {
   return value.split(path.sep).join('/');
@@ -49,6 +53,23 @@ function resolveAliasRelativePath(subpath) {
   return null;
 }
 
+function copyAliasTargetIfNeeded(aliasPathWithExt) {
+  if (processedAliasTargets.has(aliasPathWithExt)) {
+    return;
+  }
+  const sourceFile = path.join(srcRoot, aliasPathWithExt);
+  const destFile = path.join(buildSrcRoot, aliasPathWithExt);
+
+  if (!fs.existsSync(sourceFile) || fs.statSync(sourceFile).isDirectory()) {
+    return;
+  }
+
+  const destDir = path.dirname(destFile);
+  fs.mkdirSync(destDir, { recursive: true });
+  processedAliasTargets.add(aliasPathWithExt);
+  transformAliasesIfNeeded(sourceFile, destFile);
+}
+
 function transformAliasesIfNeeded(srcFile, destFile) {
   const ext = path.extname(srcFile);
   if (!transformableExtensions.has(ext)) {
@@ -57,17 +78,31 @@ function transformAliasesIfNeeded(srcFile, destFile) {
   }
 
   const contents = fs.readFileSync(srcFile, 'utf8');
-  const updated = contents.replace(/(["'`])@\/([^"'`]+)\1/g, (match, quote, subpath) => {
-    const aliasTarget = resolveAliasRelativePath(subpath);
-    if (!aliasTarget) {
-      return match;
-    }
+  const updated = contents
+    .replace(/(["'`])@\/([^"'`]+)\1/g, (match, quote, subpath) => {
+      const aliasTarget = resolveAliasRelativePath(subpath);
+      if (!aliasTarget) {
+        return match;
+      }
 
-    const targetAbsolute = path.join(buildSrcRoot, aliasTarget);
-    const destDir = path.dirname(destFile);
-    const relativeImport = ensureRelativeImport(destDir, targetAbsolute);
-    return `${quote}${relativeImport}${quote}`;
-  });
+      copyAliasTargetIfNeeded(aliasTarget);
+      const targetAbsolute = path.join(buildSrcRoot, aliasTarget);
+      const destDir = path.dirname(destFile);
+      const relativeImport = ensureRelativeImport(destDir, targetAbsolute);
+      return `${quote}${relativeImport}${quote}`;
+    })
+    .replace(/(["'`])@auth\/create\1/g, (match, quote) => {
+      const aliasTarget = staticAliasMap['@auth/create'];
+      if (!aliasTarget) {
+        return match;
+      }
+
+      copyAliasTargetIfNeeded(aliasTarget);
+      const targetAbsolute = path.join(buildSrcRoot, aliasTarget);
+      const destDir = path.dirname(destFile);
+      const relativeImport = ensureRelativeImport(destDir, targetAbsolute);
+      return `${quote}${relativeImport}${quote}`;
+    });
 
   fs.writeFileSync(destFile, updated, 'utf8');
 }
@@ -76,6 +111,9 @@ function copyDir(src, dest) {
   if (!fs.existsSync(src)) return;
   fs.mkdirSync(dest, { recursive: true });
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    if (entry.name.startsWith('__create')) {
+      continue;
+    }
     const s = path.join(src, entry.name);
     const d = path.join(dest, entry.name);
     if (entry.isDirectory()) {
