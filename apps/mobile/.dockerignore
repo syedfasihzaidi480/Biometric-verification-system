@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.expo
+.expo-shared
+dist
+.DS_Store
+*.p12
+*.mobileprovision
+*.orig.*
+web-build
+*.md
+*.test.*
+__tests__
+.git
+.gitignore
+.todo
+.easignore
