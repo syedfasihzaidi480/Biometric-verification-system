@@ -1,4 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import fs from 'node:fs';
+import path from 'node:path';
 import nodeConsole from 'node:console';
 import { skipCSRFCheck } from '@auth/core';
 import Credentials from '@auth/core/providers/credentials';
@@ -337,6 +339,39 @@ app.all('/api/*', (c) => {
   console.log('[API 404] No handler found for:', c.req.path);
   return c.json({ error: 'API endpoint not found' }, 404);
 });
+
+// Ensure expected build-time route discovery path exists to prevent ENOENT during SSR build.
+// Some tooling expects build/server/src/app/api to exist when registering routes; create it if missing.
+try {
+  const buildApiPath = path.resolve(process.cwd(), 'build', 'server', 'src', 'app', 'api');
+  if (!fs.existsSync(buildApiPath)) {
+    fs.mkdirSync(buildApiPath, { recursive: true });
+    // Copy current source api route files into that location so discovery succeeds.
+    const srcApiPath = path.resolve(process.cwd(), 'src', 'app', 'api');
+    if (fs.existsSync(srcApiPath)) {
+      for (const entry of fs.readdirSync(srcApiPath)) {
+        const s = path.join(srcApiPath, entry);
+        const d = path.join(buildApiPath, entry);
+        if (fs.statSync(s).isDirectory()) {
+          // Shallow copy only top-level route folders/files
+          fs.mkdirSync(d, { recursive: true });
+          for (const child of fs.readdirSync(s)) {
+            const cs = path.join(s, child);
+            const cd = path.join(d, child);
+            if (fs.statSync(cs).isFile()) {
+              fs.copyFileSync(cs, cd);
+            }
+          }
+        } else {
+          fs.copyFileSync(s, d);
+        }
+      }
+    }
+    console.log('[route-discovery] Prepared build route directory at', buildApiPath);
+  }
+} catch (e) {
+  console.warn('[route-discovery] Failed to prepare build route directory', e);
+}
 
 // Create React Router server (handles everything else)
 const server = await createHonoServer({

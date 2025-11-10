@@ -4,7 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "react-router dev --host --port 4000",
-		"build": "react-router build",
+		"build": "node ./scripts/prebuild-prepare-routes.cjs && react-router build && node ./scripts/postbuild-copy-routes.cjs",
 		"start": "react-router-serve ./build/server/index.js",
 		"cleanup:preserve-superadmin": "node ./scripts/cleanup-preserve-super-admin.cjs",
 		"cleanup:purge:dry": "node ./scripts/purge-non-super-admin-users.cjs",

@@ -16,6 +16,14 @@ import { restartEnvFileChange } from './plugins/restartEnvFileChange';
 export default defineConfig({
   // Keep them available via import.meta.env.NEXT_PUBLIC_*
   envPrefix: 'NEXT_PUBLIC_',
+  // Ensure modern targets that support top-level await
+  build: {
+    target: ['es2022', 'chrome100', 'safari15'],
+  },
+  ssr: {
+    // Node 18+ supports top-level await; set explicit target for SSR bundle
+    target: 'node18',
+  },
   optimizeDeps: {
     // Explicitly include fast-glob, since it gets dynamically imported and we
     // don't want that to cause a re-bundle.
