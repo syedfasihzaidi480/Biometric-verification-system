@@ -18,20 +18,38 @@ git push origin main
 3. Select: `syedfasihzaidi480/Biometric-verification-system`
 4. Click **"Deploy Now"**
 
-### Step 3: Configure Services
+⚠️ **Railway will auto-create wrong services** (api, dashboard, mobile-app)
 
-Railway will create one service. You need to add the ML service:
+**See RAILWAY_CONFIGURATION_FIX.md for detailed fix instructions**
 
-#### Add ML Service:
+### Step 3: Delete Auto-Created Services & Create Correct Ones
+
+Railway auto-detected wrong services. Delete them and create the right ones:
+
+#### Delete Existing Services:
+1. Click on **"api"** service → **Settings** → scroll down → **Delete Service**
+2. Repeat for **"dashboard"** and **"mobile-app"** services
+3. You should have an empty project now
+
+#### Create Web Service:
+1. Click **"+ New"** in Railway dashboard
+2. Select **"GitHub Repo"**
+3. Choose `syedfasihzaidi480/Biometric-verification-system`
+4. Click **"Deploy Now"**
+5. ⚠️ **IMPORTANT**: Immediately go to **Settings**
+6. Set **Root Directory**: `apps/web`
+7. Set **Service Name**: `biometric-web`
+8. Click **"Redeploy"**
+
+#### Create ML Service:
 1. Click **"+ New"** in Railway dashboard
 2. Select **"GitHub Repo"**
 3. Choose same repository
-4. Set **Root Directory**: `ml-service`
-5. Click **"Deploy"**
-
-#### Rename Services (Optional but Recommended):
-1. Click on first service → **Settings** → **Service Name**: `biometric-web`
-2. Click on second service → **Settings** → **Service Name**: `biometric-ml`
+4. Click **"Deploy Now"**
+5. ⚠️ **IMPORTANT**: Immediately go to **Settings**
+6. Set **Root Directory**: `ml-service`
+7. Set **Service Name**: `biometric-ml`
+8. Click **"Redeploy"**
 
 ### Step 4: Add Environment Variables
 
