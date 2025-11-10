@@ -21,8 +21,8 @@ export default defineConfig({
     target: ['es2022', 'chrome100', 'safari15'],
   },
   ssr: {
-    // Node 18+ supports top-level await; set explicit target for SSR bundle
-    target: 'node18',
+    // Vite only accepts the generic "node" target; Node 18+ features come from runtime
+    target: 'node',
   },
   optimizeDeps: {
     // Explicitly include fast-glob, since it gets dynamically imported and we
