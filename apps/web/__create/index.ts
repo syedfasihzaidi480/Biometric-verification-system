@@ -165,6 +165,14 @@ async function createServer() {
 
   app.use('*', requestId());
 
+  // Early request logger to confirm edge traffic reaches the app
+  app.use('*', async (c, next) => {
+    try {
+      console.log('[http]', c.req.method, c.req.path);
+    } catch {}
+    return next();
+  });
+
   app.use('*', (c, next) => {
     const requestId = c.get('requestId');
     return als.run({ requestId }, () => next());
@@ -447,6 +455,9 @@ async function createServer() {
   app.get('/ping', (c) => {
     return c.json({ ok: true, time: new Date().toISOString(), adapter: persistenceType }, 200);
   });
+
+  // Internal liveness probe
+  app.get('/__live', (c) => c.text('OK', 200));
 
   // Diagnostics: gated env/debug endpoint (temporary). Requires DEBUG_TOKEN header or query.
   app.get('/api/debug/env', (c) => {
