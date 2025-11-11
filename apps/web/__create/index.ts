@@ -443,6 +443,11 @@ async function createServer() {
   // Then, register custom API routes (includes /api/auth/register)
   app.route(API_BASENAME, api);
 
+  // Minimal ping endpoint for health checks - bypasses all auth/middleware
+  app.get('/ping', (c) => {
+    return c.json({ ok: true, time: new Date().toISOString(), adapter: persistenceType }, 200);
+  });
+
   // Diagnostics: gated env/debug endpoint (temporary). Requires DEBUG_TOKEN header or query.
   app.get('/api/debug/env', (c) => {
     const supplied = c.req.query('token') || c.req.header('x-debug-token');
@@ -523,12 +528,13 @@ async function createServer() {
     defaultLogger: false,
     // Improve startup logs to reflect actual binding instead of 127.0.0.1
     listeningListener(info) {
-      const host = process.env.HOSTNAME ?? '0.0.0.0';
-      // @ts-ignore - info may contain additional fields depending on runtime
-      const port = info?.port ?? process.env.PORT ?? '4000';
-      console.log(`🚀 Server started on port ${port}`);
-      console.log(`🌍 http://${host}:${port}`);
+      const actualHost = '0.0.0.0'; // We explicitly bind to 0.0.0.0
+      const actualPort = process.env.PORT || info?.port || '4000';
+      console.log(`🚀 Server started on port ${actualPort}`);
+      console.log(`🌍 Bound to: 0.0.0.0:${actualPort} (accessible from all interfaces)`);
+      console.log(`🔗 Public URL: ${process.env.AUTH_URL || 'http://localhost:' + actualPort}`);
       console.log(`🏎️ Server started in ${typeof performance !== 'undefined' ? Math.round(performance.now()) : 'N/A'}ms`);
+      console.log(`✅ Ready to accept connections`);
     },
   });
 
