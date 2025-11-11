@@ -41,6 +41,30 @@ for (const method of ['log', 'info', 'warn', 'error', 'debug'] as const) {
 let adapter: any;
 let mongoClient: MongoClient | null = null;
 let mongoDb: Db | null = null;
+let neonPool: Pool | null = null;
+let persistenceType: 'mongo' | 'neon' | 'none' = 'none';
+
+type PreflightResult = {
+  ok: boolean;
+  time: string;
+  env: {
+    NODE_ENV?: string;
+    AUTH_URL?: string;
+    PORT?: string;
+    HOSTNAME?: string;
+    MONGODB_URI: 'set' | 'missing';
+    MONGODB_DB?: string;
+    DATABASE_URL: 'set' | 'missing';
+    CLOUDINARY: {
+      URL: 'set' | 'missing';
+      CLOUD_NAME: 'set' | 'missing';
+    };
+  };
+  mongo?: { ok: boolean; error?: string };
+  neon?: { ok: boolean; error?: string };
+};
+
+let lastPreflight: PreflightResult | null = null;
 
 async function initializePersistence() {
   if (process.env.MONGODB_URI) {
@@ -48,18 +72,93 @@ async function initializePersistence() {
     mongoDb = mongoClient.db(process.env.MONGODB_DB || 'auth');
     const { default: MongoAdapter } = await import('./mongo-adapter');
     adapter = MongoAdapter(mongoDb);
+    persistenceType = 'mongo';
   } else if (process.env.DATABASE_URL?.trim()) {
     const pool = new Pool({
       connectionString: process.env.DATABASE_URL,
     });
+    neonPool = pool;
     adapter = NeonAdapter(pool);
+    persistenceType = 'neon';
   } else {
     throw new Error('No database connection configured. Please set either MONGODB_URI or DATABASE_URL environment variable.');
   }
 }
 
+async function preflightCheck() {
+  const envSummary = {
+    NODE_ENV: process.env.NODE_ENV,
+    AUTH_URL: process.env.AUTH_URL,
+    PORT: process.env.PORT,
+    HOSTNAME: process.env.HOSTNAME,
+    MONGODB_URI: process.env.MONGODB_URI ? 'set' as const : 'missing' as const,
+    MONGODB_DB: process.env.MONGODB_DB,
+    DATABASE_URL: process.env.DATABASE_URL ? 'set' as const : 'missing' as const,
+    CLOUDINARY: {
+      URL: process.env.CLOUDINARY_URL ? 'set' as const : 'missing' as const,
+      CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME ? 'set' as const : 'missing' as const,
+    },
+  };
+
+  console.log('[preflight] env summary:', {
+    NODE_ENV: envSummary.NODE_ENV,
+    AUTH_URL: envSummary.AUTH_URL,
+    PORT: envSummary.PORT,
+    HOSTNAME: envSummary.HOSTNAME,
+    MONGODB_URI: envSummary.MONGODB_URI,
+    MONGODB_DB: envSummary.MONGODB_DB,
+    DATABASE_URL: envSummary.DATABASE_URL,
+    CLOUDINARY: envSummary.CLOUDINARY,
+  });
+
+  const result: PreflightResult = {
+    ok: true,
+    time: new Date().toISOString(),
+    env: envSummary,
+  };
+
+  if (persistenceType === 'mongo' && mongoClient && mongoDb) {
+    try {
+      // Ensure connection established
+      await mongoClient.connect();
+      await mongoDb.command({ ping: 1 });
+      console.log('[preflight] MongoDB ping ok');
+      result.mongo = { ok: true };
+    } catch (err: any) {
+      console.error('[preflight] MongoDB ping failed:', err);
+      result.ok = false;
+      result.mongo = { ok: false, error: err?.message ?? String(err) };
+      lastPreflight = result;
+      throw new Error(
+        `MongoDB connection check failed. Ensure MONGODB_URI and MONGODB_DB are correct and network is reachable. Reason: ${result.mongo.error}`
+      );
+    }
+  }
+
+  if (persistenceType === 'neon' && neonPool) {
+    try {
+      await neonPool.query('select 1');
+      console.log('[preflight] Neon Postgres ping ok');
+      result.neon = { ok: true };
+    } catch (err: any) {
+      console.error('[preflight] Neon Postgres ping failed:', err);
+      result.ok = false;
+      result.neon = { ok: false, error: err?.message ?? String(err) };
+      lastPreflight = result;
+      throw new Error(
+        `Postgres connection check failed. Ensure DATABASE_URL is correct and service reachable. Reason: ${result.neon.error}`
+      );
+    }
+  }
+
+  lastPreflight = result;
+  return result;
+}
+
 async function createServer() {
   await initializePersistence();
+  // Perform preflight database connectivity checks before binding the server
+  await preflightCheck();
 
   const app = new Hono();
 
@@ -342,6 +441,37 @@ async function createServer() {
 
   // Then, register custom API routes (includes /api/auth/register)
   app.route(API_BASENAME, api);
+
+  // Diagnostics: gated env/debug endpoint (temporary). Requires DEBUG_TOKEN header or query.
+  app.get('/api/debug/env', (c) => {
+    const supplied = c.req.query('token') || c.req.header('x-debug-token');
+    const expected = process.env.DEBUG_TOKEN;
+    if (!expected || supplied !== expected) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const safeEnv = {
+      NODE_ENV: process.env.NODE_ENV,
+      AUTH_URL: process.env.AUTH_URL,
+      PORT: process.env.PORT,
+      HOSTNAME: process.env.HOSTNAME,
+      MONGODB_URI: process.env.MONGODB_URI ? 'set' : 'missing',
+      MONGODB_DB: process.env.MONGODB_DB,
+      DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'missing',
+      CLOUDINARY: {
+        URL: process.env.CLOUDINARY_URL ? 'set' : 'missing',
+        CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME ? 'set' : 'missing',
+      },
+      AUTH_SECRET: process.env.AUTH_SECRET ? 'set' : 'missing',
+    };
+
+    return c.json({
+      time: new Date().toISOString(),
+      adapter: persistenceType,
+      preflight: lastPreflight,
+      env: safeEnv,
+    });
+  });
 
   // Catch-all: if a request reaches here and starts with /api,
   // it means no handler was found - return 404
