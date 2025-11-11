@@ -540,12 +540,29 @@ async function createServer() {
     // Improve startup logs to reflect actual binding instead of 127.0.0.1
     listeningListener(info) {
       const actualHost = '0.0.0.0'; // We explicitly bind to 0.0.0.0
-      const actualPort = process.env.PORT || info?.port || '4000';
+      const actualPort = String(process.env.PORT || info?.port || '4000');
       console.log(`🚀 Server started on port ${actualPort}`);
       console.log(`🌍 Bound to: 0.0.0.0:${actualPort} (accessible from all interfaces)`);
       console.log(`🔗 Public URL: ${process.env.AUTH_URL || 'http://localhost:' + actualPort}`);
       console.log(`🏎️ Server started in ${typeof performance !== 'undefined' ? Math.round(performance.now()) : 'N/A'}ms`);
       console.log(`✅ Ready to accept connections`);
+
+      // Self-check from inside the container to verify listener works
+      const urls = [
+        `http://127.0.0.1:${actualPort}/__live`,
+        `http://localhost:${actualPort}/__live`,
+      ];
+
+      setTimeout(async () => {
+        for (const u of urls) {
+          try {
+            const res = await fetch(u);
+            console.log(`[self-check] GET ${u} ->`, res.status);
+          } catch (e) {
+            console.warn(`[self-check] Failed to reach ${u}:`, (e as any)?.message || String(e));
+          }
+        }
+      }, 300);
     },
   });
 
