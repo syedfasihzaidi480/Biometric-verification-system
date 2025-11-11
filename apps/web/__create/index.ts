@@ -456,6 +456,22 @@ async function createServer() {
     return c.json({ ok: true, time: new Date().toISOString(), adapter: persistenceType }, 200);
   });
 
+  // Fast health endpoint implemented directly in the server to bypass
+  // any potential dynamic route-loader issues in production.
+  app.get('/api/health', (c) => {
+    return c.json(
+      {
+        success: true,
+        data: {
+          storage: persistenceType,
+          preflight: lastPreflight,
+          time: new Date().toISOString(),
+        },
+      },
+      200
+    );
+  });
+
   // Internal liveness probe
   app.get('/__live', (c) => c.text('OK', 200));
 
