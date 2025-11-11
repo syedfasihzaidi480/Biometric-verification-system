@@ -1,0 +1,5 @@
+# Global ignores
+**/.expo/
+/apps/mobile/.expo/
+/apps/mobile/dist/
+/apps/mobile/web-build/

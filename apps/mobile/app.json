@@ -3,7 +3,7 @@
     "name": "Create mobile app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -24,7 +24,6 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
-      "usesCleartextTraffic": true,
       "package": "xyz.create.CreateExpoEnvironment"
     },
     "plugins": [
@@ -49,6 +48,9 @@
         {
           "ios": {
             "useFrameworks": "static"
+          },
+          "android": {
+            "usesCleartextTraffic": true
           }
         }
       ],
