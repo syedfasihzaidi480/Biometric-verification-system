@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ["nodejs_22", "bash"]
+
+[phases.install]
+# Do not run npm install at the repo root (monorepo). We'll handle installs in build.sh
+cmds = []
+
+[phases.build]
+cmds = ["bash ./build.sh"]
+
+[start]
+cmd = "bash ./start.sh"
