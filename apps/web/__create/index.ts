@@ -385,7 +385,20 @@ async function createServer() {
 
   const server = await createHonoServer({
     app,
+    // Ensure the server binds to the correct interface/port on PaaS like Railway
+    // Railway injects PORT at runtime; do not rely on a hardcoded default
+    port: Number(process.env.PORT) || 4000,
+    hostname: '0.0.0.0',
     defaultLogger: false,
+    // Improve startup logs to reflect actual binding instead of 127.0.0.1
+    listeningListener(info) {
+      const host = process.env.HOSTNAME ?? '0.0.0.0';
+      // @ts-ignore - info may contain additional fields depending on runtime
+      const port = info?.port ?? process.env.PORT ?? '4000';
+      console.log(`🚀 Server started on port ${port}`);
+      console.log(`🌍 http://${host}:${port}`);
+      console.log(`🏎️ Server started in ${typeof performance !== 'undefined' ? Math.round(performance.now()) : 'N/A'}ms`);
+    },
   });
 
   return server;
