@@ -11,6 +11,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import KeyboardAvoidingAnimatedView from '@/components/KeyboardAvoidingAnimatedView';
 import { apiFetchJson } from '@/utils/api';
 import DateInput from '@/components/DateInput';
+import PhoneNumberInput from '@/components/PhoneNumberInput';
 import { useTranslation } from '@/i18n/useTranslation';
 import { useTheme } from '@/utils/theme/ThemeProvider';
 
@@ -31,6 +32,7 @@ export default function RegisterScreen() {
 	const [dateOfBirth, setDateOfBirth] = useState('');
 	const [idDocumentType, setIdDocumentType] = useState('');
 	const [selectedDocument, setSelectedDocument] = useState(null);
+	const [isPhoneValid, setIsPhoneValid] = useState(false);
   
 	const documentTypes = [
 		{ value: 'national_id', label: t('document.documentTypes.national_id') },
@@ -167,6 +169,10 @@ export default function RegisterScreen() {
 			Alert.alert(t('common.error'), t('registration.phoneRequired'));
 			return;
 		}
+		if (!isPhoneValid) {
+			Alert.alert(t('common.error'), t('registration.validPhone'));
+			return;
+		}
 		if (!dateOfBirth.trim()) {
 			Alert.alert(t('common.error'), t('registration.dateRequired'));
 			return;
@@ -185,13 +191,14 @@ export default function RegisterScreen() {
 			return;
 		}
 
-		// Prevent future DOBs (optional rule)
+		// Prevent future DOBs
 		try {
 			const [d, m, y] = dateOfBirth.split('/').map((v) => parseInt(v, 10));
 			const dob = new Date(y, m - 1, d);
 			const today = new Date();
+			today.setHours(0, 0, 0, 0);
 			if (isFinite(dob.getTime()) && dob > today) {
-				Alert.alert(t('common.error'), t('registration.dateFormat'));
+				Alert.alert(t('common.error'), t('registration.dateNoFuture') || 'Date of birth cannot be in the future');
 				return;
 			}
 		} catch {}
@@ -354,20 +361,15 @@ export default function RegisterScreen() {
 							</View>
 						</View>
 
-						<View style={styles.formGroup}>
-							<Text style={[styles.label, { color: colors.text }]}>{t('registration.phoneNumber')} *</Text>
-							<View style={styles.inputContainer}>
-								<Phone size={18} color="#9CA3AF" style={styles.inputIcon} />
-								<TextInput
-									style={styles.input}
-									value={mobileNumber}
-									onChangeText={setMobileNumber}
-									placeholder={t('registration.phoneNumberPlaceholder')}
-									keyboardType="phone-pad"
-									placeholderTextColor="#9CA3AF"
-								/>
-							</View>
-						</View>
+					<View style={styles.formGroup}>
+						<Text style={[styles.label, { color: colors.text }]}>{t('registration.phoneNumber')} *</Text>
+						<PhoneNumberInput
+							value={mobileNumber}
+							onChangeText={setMobileNumber}
+							onValidationChange={setIsPhoneValid}
+							placeholder={t('registration.phoneNumberPlaceholder')}
+						/>
+					</View>
 
 						<View style={styles.formGroup}>
 							<Text style={[styles.label, { color: colors.text }]}>{t('registration.dateOfBirth')} *</Text>

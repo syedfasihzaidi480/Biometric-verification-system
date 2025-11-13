@@ -18,6 +18,8 @@ import { useTranslation } from "@/i18n/useTranslation";
 import { apiFetchJson } from "@/utils/api";
 import { signInWithCredentials } from "@/utils/auth/credentials";
 import DateInput from "@/components/DateInput";
+import PhoneNumberInput from "@/components/PhoneNumberInput";
+import PasswordPhoneInput from "@/components/PasswordPhoneInput";
 
 export default function RegistrationScreen() {
   const insets = useSafeAreaInsets();
@@ -29,11 +31,12 @@ export default function RegistrationScreen() {
     pensionNumber: "",
     phoneNumber: "",
     email: "",
-    password: "",
+    passwordPhone: "",
   });
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isPhoneValid, setIsPhoneValid] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
@@ -43,11 +46,21 @@ export default function RegistrationScreen() {
       newErrors.fullName = t("registration.nameRequired");
     }
 
-    // Date validation (DD/MM/YYYY format)
+    // Date validation (YYYY-MM-DD format)
     if (!formData.dateOfBirth.trim()) {
       newErrors.dateOfBirth = t('registration.dateRequired');
-    } else if (!/^\d{2}\/\d{2}\/\d{4}$/.test(formData.dateOfBirth.trim())) {
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.dateOfBirth.trim())) {
       newErrors.dateOfBirth = t('registration.dateFormat');
+    } else {
+      // Check if date is in the future
+      const [year, month, day] = formData.dateOfBirth.split("-");
+      const selectedDate = new Date(Number(year), Number(month) - 1, Number(day));
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate > today) {
+        newErrors.dateOfBirth = t('registration.dateNoFuture') || 'Date of birth cannot be in the future';
+      }
     }
 
     // Pension number validation
@@ -58,7 +71,7 @@ export default function RegistrationScreen() {
     // Phone validation
     if (!formData.phoneNumber.trim()) {
       newErrors.phoneNumber = t("registration.phoneRequired");
-    } else if (!/^\+?[\d\s\-\(\)]{8,20}$/.test(formData.phoneNumber.trim())) {
+    } else if (!isPhoneValid) {
       newErrors.phoneNumber = t("registration.validPhone");
     }
 
@@ -67,11 +80,9 @@ export default function RegistrationScreen() {
       newErrors.email = t('registration.validEmail');
     }
 
-    // Password validation
-    if (!formData.password.trim()) {
-      newErrors.password = t('registration.passwordRequired');
-    } else if (formData.password.trim().length < 6) {
-      newErrors.password = t('registration.passwordMin');
+    // Password phone validation
+    if (!formData.passwordPhone.trim()) {
+      newErrors.passwordPhone = t('registration.passwordRequired');
     }
 
     setErrors(newErrors);
@@ -86,9 +97,8 @@ export default function RegistrationScreen() {
     setIsLoading(true);
 
     try {
-      // Convert DD/MM/YYYY to YYYY-MM-DD for database
-      const [day, month, year] = formData.dateOfBirth.split("/");
-      const isoDate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+      // Already in YYYY-MM-DD format
+      const isoDate = formData.dateOfBirth.trim();
 
       const result = await apiFetchJson("/api/auth/register", {
         method: "POST",
@@ -99,7 +109,7 @@ export default function RegistrationScreen() {
           name: formData.fullName.trim(),
           phone: formData.phoneNumber.trim(),
           email: formData.email.trim() || undefined,
-          password: formData.password.trim(),
+          password: formData.passwordPhone.trim(),
           date_of_birth: isoDate,
           pension_number: formData.pensionNumber.trim(),
           preferred_language: currentLanguage,
@@ -115,7 +125,7 @@ export default function RegistrationScreen() {
               identifier: loginIdentifier,
               email: formData.email.trim() || undefined,
               phone: formData.phoneNumber.trim() || undefined,
-              password: formData.password.trim(),
+              password: formData.passwordPhone.trim(),
               callbackUrl: "/",
             });
           } catch (authError) {
@@ -275,6 +285,7 @@ export default function RegistrationScreen() {
                 <DateInput
                   value={formData.dateOfBirth}
                   onChangeText={(value) => updateFormData("dateOfBirth", value)}
+                  displayFormat="YYYY-MM-DD"
                 />
               </View>
               {errors.dateOfBirth && (
@@ -310,24 +321,15 @@ export default function RegistrationScreen() {
             {/* Phone Number */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
-                {t("registration.phoneNumber")} {t('registration.phoneIncludeAreaCode')} *
+                {t("registration.phoneNumber")} *
               </Text>
-              <View
-                style={[
-                  styles.inputContainer,
-                  errors.phoneNumber && styles.inputError,
-                ]}
-              >
-                <Phone size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.phoneNumber}
-                  onChangeText={(value) => updateFormData("phoneNumber", value)}
-                  placeholder={t('registration.phoneNumberPlaceholder')}
-                  keyboardType="phone-pad"
-                  autoComplete="tel"
-                />
-              </View>
+              <PhoneNumberInput
+                value={formData.phoneNumber}
+                onChangeText={(value) => updateFormData("phoneNumber", value)}
+                onValidationChange={setIsPhoneValid}
+                placeholder={t('registration.phoneNumberPlaceholder')}
+                error={!!errors.phoneNumber}
+              />
               {errors.phoneNumber && (
                 <Text style={styles.errorText}>{errors.phoneNumber}</Text>
               )}
@@ -366,26 +368,17 @@ export default function RegistrationScreen() {
 
             {/* Password */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>{t('registration.password')} *</Text>
-              <View
-                style={[
-                  styles.inputContainer,
-                  errors.password && styles.inputError,
-                ]}
-              >
-                <Lock size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.password}
-                  onChangeText={(value) => updateFormData("password", value)}
-                  placeholder={t('registration.passwordPlaceholder')}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoComplete="password"
-                />
-              </View>
-              {errors.password && (
-                <Text style={styles.errorText}>{errors.password}</Text>
+              <Text style={styles.label}>
+                {t('registration.password')} *
+              </Text>
+              <PasswordPhoneInput
+                value={formData.passwordPhone}
+                onChangeText={(value) => updateFormData("passwordPhone", value)}
+                placeholder={t('registration.passwordPlaceholder')}
+                error={!!errors.passwordPhone}
+              />
+              {errors.passwordPhone && (
+                <Text style={styles.errorText}>{errors.passwordPhone}</Text>
               )}
             </View>
 
@@ -503,6 +496,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#6B7280",
     marginTop: 6,
+    marginBottom: 8,
+    fontStyle: "italic",
   },
   requiredNote: {
     fontSize: 12,

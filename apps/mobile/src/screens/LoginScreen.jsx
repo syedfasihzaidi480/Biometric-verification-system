@@ -13,39 +13,49 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { ArrowLeft, Mail, Lock, Phone } from "lucide-react-native";
+import { ArrowLeft, Mail, Phone } from "lucide-react-native";
 import { useTranslation } from "@/i18n/useTranslation";
+import PhoneNumberInput from "@/components/PhoneNumberInput";
+import PasswordPhoneInput from "@/components/PasswordPhoneInput";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
-  const [authMode, setAuthMode] = useState("email");
+  const [authMode, setAuthMode] = useState("phone");
   const [formData, setFormData] = useState({
     email: "",
-    phone: "",
-    password: "",
+    loginPhone: "",
+    passwordPhone: "",
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoginPhoneValid, setIsLoginPhoneValid] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
     const emailValue = formData.email.trim();
-    const phoneValue = formData.phone.trim();
 
     if (authMode === "email") {
       if (!emailValue) {
-        newErrors.email = "Email is required";
+        newErrors.email = t("login.emailRequired", { defaultValue: "Email is required" });
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
-        newErrors.email = "Please enter a valid email address";
+        newErrors.email = t("login.validEmail", { defaultValue: "Please enter a valid email address" });
       }
-    } else if (!phoneValue) {
-      newErrors.phone = "Phone number is required";
-    }
+      
+      if (!formData.passwordPhone.trim()) {
+        newErrors.passwordPhone = t("login.passwordRequired", { defaultValue: "Password is required" });
+      }
+    } else {
+      if (!formData.loginPhone.trim()) {
+        newErrors.loginPhone = t("login.phoneRequired", { defaultValue: "Phone number is required" });
+      } else if (!isLoginPhoneValid) {
+        newErrors.loginPhone = t("login.validPhone", { defaultValue: "Please enter a valid phone number" });
+      }
 
-    if (!formData.password.trim()) {
-      newErrors.password = "Password is required";
+      if (!formData.passwordPhone.trim()) {
+        newErrors.passwordPhone = t("login.passwordRequired", { defaultValue: "Password is required" });
+      }
     }
 
     setErrors(newErrors);
@@ -62,24 +72,24 @@ export default function LoginScreen() {
     try {
       const { signInWithCredentials } = await import("@/utils/auth/credentials");
       const emailValue = formData.email.trim();
-      const phoneValue = formData.phone.trim();
-      const identifier = authMode === "email" ? emailValue : phoneValue;
+      const loginPhoneValue = formData.loginPhone.trim();
+      const identifier = authMode === "email" ? emailValue : loginPhoneValue;
 
       const result = await signInWithCredentials({
         identifier,
         email: authMode === "email" ? emailValue : undefined,
-        phone: authMode === "phone" ? phoneValue : undefined,
-        password: formData.password.trim(),
+        phone: authMode === "phone" ? loginPhoneValue : undefined,
+        password: formData.passwordPhone.trim(),
         callbackUrl: "/(tabs)",
       });
 
       if (result.ok && result.session) {
         Alert.alert(
-          "Success",
-          "You have successfully signed in!",
+          t("common.success", { defaultValue: "Success" }),
+          t("login.signInSuccess", { defaultValue: "You have successfully signed in!" }),
           [
             {
-              text: "OK",
+              text: t("common.ok", { defaultValue: "OK" }),
               onPress: () => router.replace("/(tabs)"),
             },
           ]
@@ -88,24 +98,27 @@ export default function LoginScreen() {
       }
 
       const lowerError = result.error?.toLowerCase?.() || "";
-      let errorMessage = "Invalid credentials. Please try again.";
+      let errorMessage = t("login.invalidCredentials", { defaultValue: "Invalid credentials. Please try again." });
       if (lowerError.includes("no session")) {
-        errorMessage = "Unable to establish session. Please check your credentials and try again.";
+        errorMessage = t("login.noSession", { defaultValue: "Unable to establish session. Please check your credentials and try again." });
       } else if (lowerError.includes("invalid")) {
-        errorMessage = "The credentials you entered are incorrect. If you don't have an account, please register first.";
+        errorMessage = t("login.incorrectCredentials", { defaultValue: "The credentials you entered are incorrect. If you don't have an account, please register first." });
       }
 
       Alert.alert(
-        "Sign In Failed",
+        t("login.signInFailed", { defaultValue: "Sign In Failed" }),
         errorMessage,
         [
-          { text: "Register", onPress: () => router.push("/registration") },
-          { text: "Try Again", style: "cancel" },
+          { text: t("registration.register", { defaultValue: "Register" }), onPress: () => router.push("/registration") },
+          { text: t("common.tryAgain", { defaultValue: "Try Again" }), style: "cancel" },
         ]
       );
     } catch (error) {
       console.error("[LoginScreen] Login error:", error);
-      Alert.alert("Error", error.message || "Something went wrong. Please try again.");
+      Alert.alert(
+        t("common.error", { defaultValue: "Error" }), 
+        error.message || t("errors.server", { defaultValue: "Something went wrong. Please try again." })
+      );
     } finally {
       setIsLoading(false);
     }
@@ -133,7 +146,7 @@ export default function LoginScreen() {
           >
             <ArrowLeft size={24} color="#333" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Sign In</Text>
+          <Text style={styles.headerTitle}>{t("auth.signIn", { defaultValue: "Sign In" })}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -144,24 +157,15 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.welcomeContainer}>
-            <Text style={styles.welcomeTitle}>Welcome Back</Text>
+            <Text style={styles.welcomeTitle}>{t("login.welcomeBack", { defaultValue: "Welcome Back" })}</Text>
             <Text style={styles.welcomeSubtitle}>
-              Sign in to your account
+              {t("login.signInToAccount", { defaultValue: "Sign in to your account" })}
             </Text>
           </View>
 
           <View style={styles.form}>
-            <Text style={styles.modeToggleLabel}>Sign in using</Text>
+            <Text style={styles.modeToggleLabel}>{t("login.signInUsing", { defaultValue: "Sign in using" })}</Text>
             <View style={styles.modeToggleRow}>
-              <TouchableOpacity
-                style={[styles.modeButton, authMode === "email" && styles.modeButtonActive]}
-                onPress={() => {
-                  setAuthMode("email");
-                  setErrors((prev) => ({ ...prev, phone: "" }));
-                }}
-              >
-                <Text style={[styles.modeButtonText, authMode === "email" && styles.modeButtonTextActive]}>Email</Text>
-              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modeButton, authMode === "phone" && styles.modeButtonActive]}
                 onPress={() => {
@@ -169,25 +173,38 @@ export default function LoginScreen() {
                   setErrors((prev) => ({ ...prev, email: "" }));
                 }}
               >
-                <Text style={[styles.modeButtonText, authMode === "phone" && styles.modeButtonTextActive]}>Phone</Text>
+                <Text style={[styles.modeButtonText, authMode === "phone" && styles.modeButtonTextActive]}>
+                  {t("login.phone", { defaultValue: "Phone" })}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeButton, authMode === "email" && styles.modeButtonActive]}
+                onPress={() => {
+                  setAuthMode("email");
+                  setErrors((prev) => ({ ...prev, loginPhone: "" }));
+                }}
+              >
+                <Text style={[styles.modeButtonText, authMode === "email" && styles.modeButtonTextActive]}>
+                  {t("login.email", { defaultValue: "Email" })}
+                </Text>
               </TouchableOpacity>
             </View>
             <Text style={styles.modeToggleHelper}>
-              {authMode === "email"
-                ? "Use your email address"
-                : "Use your phone number including area code"}
+              {authMode === "phone"
+                ? t("login.usePhoneNumber", { defaultValue: "Use your phone number" })
+                : t("login.useEmailAddress", { defaultValue: "Use your email address" })}
             </Text>
 
             {authMode === "email" ? (
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email Address</Text>
+                <Text style={styles.label}>{t("login.emailAddress", { defaultValue: "Email Address" })}</Text>
                 <View style={[styles.inputContainer, errors.email && styles.inputError]}>
                   <Mail size={20} color="#666" style={styles.inputIcon} />
                   <TextInput
                     style={styles.textInput}
                     value={formData.email}
                     onChangeText={(value) => updateFormData("email", value)}
-                    placeholder="you@example.com"
+                    placeholder={t("login.emailPlaceholder", { defaultValue: "you@example.com" })}
                     autoCapitalize="none"
                     keyboardType="email-address"
                     autoComplete="email"
@@ -197,42 +214,33 @@ export default function LoginScreen() {
               </View>
             ) : (
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Phone Number</Text>
-                <View style={[styles.inputContainer, errors.phone && styles.inputError]}>
-                  <Phone size={20} color="#666" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.textInput}
-                    value={formData.phone}
-                    onChangeText={(value) => updateFormData("phone", value)}
-                    placeholder="Enter your phone number"
-                    autoCapitalize="none"
-                    keyboardType="phone-pad"
-                    autoComplete="tel"
-                  />
-                </View>
-                {errors.phone ? <Text style={styles.errorText}>{errors.phone}</Text> : null}
+                <Text style={styles.label}>{t("login.phoneNumber", { defaultValue: "Phone Number" })}</Text>
+                <PhoneNumberInput
+                  value={formData.loginPhone}
+                  onChangeText={(value) => updateFormData("loginPhone", value)}
+                  onValidationChange={setIsLoginPhoneValid}
+                  placeholder={t("login.phonePlaceholder", { defaultValue: "Enter your phone number" })}
+                  error={!!errors.loginPhone}
+                />
+                {errors.loginPhone ? <Text style={styles.errorText}>{errors.loginPhone}</Text> : null}
               </View>
             )}
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <View style={[styles.inputContainer, errors.password && styles.inputError]}>
-                <Lock size={20} color="#666" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.textInput}
-                  value={formData.password}
-                  onChangeText={(value) => updateFormData("password", value)}
-                  placeholder="••••••••"
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoComplete="password"
-                />
-              </View>
-              {errors.password ? <Text style={styles.errorText}>{errors.password}</Text> : null}
+              <Text style={styles.label}>
+                {t("login.password", { defaultValue: "Password" })}
+              </Text>
+              <PasswordPhoneInput
+                value={formData.passwordPhone}
+                onChangeText={(value) => updateFormData("passwordPhone", value)}
+                placeholder={t("login.passwordPlaceholder", { defaultValue: "••••••••" })}
+                error={!!errors.passwordPhone}
+              />
+              {errors.passwordPhone ? <Text style={styles.errorText}>{errors.passwordPhone}</Text> : null}
             </View>
 
             <Text style={styles.terms}>
-              By signing in, you agree to our Terms of Service and Privacy Policy
+              {t("login.termsAgreement", { defaultValue: "By signing in, you agree to our Terms of Service and Privacy Policy" })}
             </Text>
           </View>
         </ScrollView>
@@ -244,7 +252,7 @@ export default function LoginScreen() {
             disabled={isLoading}
           >
             <Text style={styles.loginButtonText}>
-              {isLoading ? t("common.loading") : "Sign In"}
+              {isLoading ? t("common.loading") : t("auth.signIn", { defaultValue: "Sign In" })}
             </Text>
           </TouchableOpacity>
 
@@ -253,7 +261,8 @@ export default function LoginScreen() {
             onPress={() => router.push("/registration")}
           >
             <Text style={styles.registerText}>
-              Don't have an account? <Text style={styles.registerTextBold}>Register</Text>
+              {t("login.noAccount", { defaultValue: "Don't have an account?" })}{" "}
+              <Text style={styles.registerTextBold}>{t("registration.register", { defaultValue: "Register" })}</Text>
             </Text>
           </TouchableOpacity>
         </View>

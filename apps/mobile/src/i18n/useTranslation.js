@@ -7,7 +7,7 @@ const STORAGE_KEY = 'user-language-preference';
 
 // Zustand store for language management
 export const useLanguageStore = create((set, get) => ({
-  currentLanguage: 'en',
+  currentLanguage: 'fr',
   isLoading: true,
   
   setLanguage: async (language) => {

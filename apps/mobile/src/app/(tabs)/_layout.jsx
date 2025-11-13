@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Home, ShieldCheck, User } from 'lucide-react-native';
+import { Home, ShieldCheck, User, UserPlus } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -52,11 +52,13 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Hide register screens from tab bar */}
       <Tabs.Screen
-        name="register"
+        name="register/index"
         options={{
-          href: null, // This hides it from the tab bar
+          title: 'Register',
+          tabBarIcon: ({ color, size = 24 }) => (
+            <UserPlus color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen

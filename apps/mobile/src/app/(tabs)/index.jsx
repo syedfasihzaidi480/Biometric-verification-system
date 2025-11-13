@@ -29,6 +29,7 @@ import {
   Camera,
   FileText,
 } from 'lucide-react-native';
+import LanguageSelector from '@/components/LanguageSelector';
 
 const INPS_LOGO = require('../../../assets/images/icon.png');
 
@@ -104,6 +105,11 @@ export default function HomeScreen() {
     return (
       <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
         <StatusBar style={isDark ? 'light' : 'dark'} />
+
+        {/* Language Selector - Top Right */}
+        <View style={styles.topBar}>
+          <LanguageSelector compact style={styles.languageSelector} />
+        </View>
 
         <ScrollView
           contentContainerStyle={[styles.authContent, { paddingBottom: insets.bottom + 24 }]}
@@ -274,6 +280,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+  },
+  topBar: {
+    position: 'absolute',
+    top: 35,
+    right: 16,
+    zIndex: 10,
+  },
+  languageSelector: {
+    // Additional styling if needed
   },
   authContent: {
     flexGrow: 1,

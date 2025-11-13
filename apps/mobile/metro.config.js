@@ -62,6 +62,11 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
     ) {
       return context.resolveRequest(context, moduleName, platform);
     }
+    // Handle @/ alias for src directory
+    if (moduleName.startsWith('@/')) {
+      const srcPath = path.resolve(__dirname, 'src', moduleName.substring(2));
+      return context.resolveRequest(context, srcPath, platform);
+    }
     // Wildcard alias for Expo Google Fonts
     if (moduleName.startsWith('@expo-google-fonts/') && moduleName !== '@expo-google-fonts/dev') {
       return context.resolveRequest(context, '@expo-google-fonts/dev', platform);

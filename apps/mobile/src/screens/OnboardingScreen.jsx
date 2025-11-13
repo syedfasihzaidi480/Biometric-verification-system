@@ -35,7 +35,7 @@ const onboardingData = [
   },
   {
     id: "2",
-    title: "Fast & Easy\nIdentity Verification",
+    title: "Fast & Easy\nBiometric",
     description:
       "Complete your verification in minutes with our streamlined process. Just scan your documents and verify your identity.",
     icon: Fingerprint,
@@ -55,7 +55,7 @@ const onboardingData = [
     id: "4",
     title: "Ready to Get\nStarted?",
     description:
-      "Join thousands of verified users. Your secure identity verification journey begins now.",
+      "Join thousands of verified users. Your secure biometric journey begins now.",
     icon: CheckCircle,
     colors: ["#43e97b", "#38f9d7"],
     iconColor: "#fff",

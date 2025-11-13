@@ -2,13 +2,14 @@
   "name": "mobile-app",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "eslint src --ext .ts,.tsx || true",
+    "lint": "eslint src --ext .ts,.tsx",
     "format": "prettier --write .",
     "test": "node -e \"console.log('mobile-app: tests placeholder')\""
   },

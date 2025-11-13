@@ -73,7 +73,39 @@ export const en = {
     close: 'Close',
     next: 'Next',
     previous: 'Previous',
-    submit: 'Submit'
+    submit: 'Submit',
+    tryAgain: 'Try Again'
+  },
+  login: {
+    welcomeBack: 'Welcome Back',
+    signInToAccount: 'Sign in to your account',
+    signInUsing: 'Sign in using',
+    email: 'Email',
+    phone: 'Phone',
+    useEmailAddress: 'Use your email address',
+    usePhoneNumber: 'Use your phone number',
+    emailAddress: 'Email Address',
+    emailPlaceholder: 'you@example.com',
+    phoneNumber: 'Phone Number',
+    phonePlaceholder: 'Enter your phone number',
+    password: 'Password',
+    passwordPlaceholder: '••••••••',
+    phonePassword: 'Phone Number Password',
+    phonePasswordHelper: 'Enter a phone number to use as your password',
+    phonePasswordPlaceholder: 'Enter phone number',
+    phonePasswordRequired: 'Phone number password is required',
+    emailRequired: 'Email is required',
+    validEmail: 'Please enter a valid email address',
+    phoneRequired: 'Phone number is required',
+    passwordRequired: 'Password is required',
+    signInSuccess: 'You have successfully signed in!',
+    signInFailed: 'Sign In Failed',
+    invalidCredentials: 'Invalid credentials. Please try again.',
+    noSession: 'Unable to establish session. Please check your credentials and try again.',
+    incorrectCredentials: 'The credentials you entered are incorrect. If you don\'t have an account, please register first.',
+    termsAgreement: 'By signing in, you agree to our Terms of Service and Privacy Policy',
+    noAccount: 'Don\'t have an account?',
+    register: 'Register'
   },
   onboarding: {
     welcome: 'Welcome to Voice Biometrics',
@@ -110,6 +142,10 @@ export const en = {
     passwordPlaceholder: 'Create a password',
     passwordRequired: 'Password is required',
     passwordMin: 'Password must be at least 6 characters',
+    phonePassword: 'Phone Number Password',
+    phonePasswordHelper: 'Enter a phone number to use as your password',
+    phonePasswordPlaceholder: 'Enter phone number',
+    phonePasswordRequired: 'Phone number password is required',
     personalInformation: 'Personal Information',
     idDocumentType: 'ID Document Type',
     idDocumentUpload: 'ID Document Upload',
@@ -119,7 +155,7 @@ export const en = {
     saveProfile: 'Save Profile',
   },
   verify: {
-    title: 'Identity Verification',
+    title: 'Biometric',
     subtitle: 'Complete all steps to verify your identity',
     progress: 'Verification Progress',
     overallStatus: 'Overall Status',
@@ -479,7 +515,39 @@ export const fr = {
     close: 'Fermer',
     next: 'Suivant',
     previous: 'Précédent',
-    submit: 'Soumettre'
+    submit: 'Soumettre',
+    tryAgain: 'Réessayer'
+  },
+  login: {
+    welcomeBack: 'Bon retour',
+    signInToAccount: 'Connectez-vous à votre compte',
+    signInUsing: 'Se connecter avec',
+    email: 'Email',
+    phone: 'Téléphone',
+    useEmailAddress: 'Utilisez votre adresse email',
+    usePhoneNumber: 'Utilisez votre numéro de téléphone',
+    emailAddress: 'Adresse email',
+    emailPlaceholder: 'vous@exemple.com',
+    phoneNumber: 'Numéro de téléphone',
+    phonePlaceholder: 'Entrez votre numéro de téléphone',
+    password: 'Mot de passe',
+    passwordPlaceholder: '••••••••',
+    phonePassword: 'Numéro de téléphone comme mot de passe',
+    phonePasswordHelper: 'Entrez un numéro de téléphone à utiliser comme mot de passe',
+    phonePasswordPlaceholder: 'Entrez le numéro de téléphone',
+    phonePasswordRequired: 'Le numéro de téléphone (mot de passe) est requis',
+    emailRequired: 'L\'email est requis',
+    validEmail: 'Veuillez entrer une adresse email valide',
+    phoneRequired: 'Le numéro de téléphone est requis',
+    passwordRequired: 'Le mot de passe est requis',
+    signInSuccess: 'Vous vous êtes connecté avec succès !',
+    signInFailed: 'Échec de la connexion',
+    invalidCredentials: 'Identifiants invalides. Veuillez réessayer.',
+    noSession: 'Impossible d\'établir la session. Veuillez vérifier vos identifiants et réessayer.',
+    incorrectCredentials: 'Les identifiants que vous avez entrés sont incorrects. Si vous n\'avez pas de compte, veuillez vous inscrire d\'abord.',
+    termsAgreement: 'En vous connectant, vous acceptez nos Conditions d\'utilisation et notre Politique de confidentialité',
+    noAccount: 'Vous n\'avez pas de compte ?',
+    register: 'S\'inscrire'
   },
   onboarding: {
     welcome: 'Bienvenue dans Voice Biometrics',
@@ -494,7 +562,7 @@ export const fr = {
     fullNamePlaceholder: 'Entrez votre nom complet',
     phoneNumber: 'Numéro de téléphone',
     phoneNumberPlaceholder: 'Entrez votre numéro de téléphone',
-  phoneIncludeAreaCode: '(Inclure l’indicatif régional)',
+    phoneIncludeAreaCode: '(Inclure l\'indicatif régional)',
     email: 'Email',
     emailPlaceholder: 'Entrez votre adresse email',
     emailOptionalTag: 'Facultatif',
@@ -516,16 +584,21 @@ export const fr = {
     passwordPlaceholder: 'Créer un mot de passe',
     passwordRequired: 'Le mot de passe est requis',
     passwordMin: 'Le mot de passe doit contenir au moins 6 caractères',
+    phonePassword: 'Numéro de téléphone comme mot de passe',
+    phonePasswordHelper: 'Entrez un numéro de téléphone à utiliser comme mot de passe',
+    phonePasswordPlaceholder: 'Entrez le numéro de téléphone',
+    phonePasswordRequired: 'Le numéro de téléphone (mot de passe) est requis',
     personalInformation: 'Informations personnelles',
-    idDocumentType: 'Type de document d’identité',
-    idDocumentUpload: 'Téléchargement du document d’identité',
+    idDocumentType: 'Type de document d\'identité',
+    idDocumentUpload: 'Téléchargement du document d\'identité',
     documentSelected: 'Document sélectionné',
-    tapToUploadId: 'Appuyez pour télécharger votre document d’identité',
+    tapToUploadId: 'Appuyez pour télécharger votre document d\'identité',
     supportedFormats: 'Formats pris en charge : JPG, PNG, PDF',
     saveProfile: 'Enregistrer le profil',
+    register: 'S\'inscrire',
   },
   verify: {
-    title: 'Vérification d’identité',
+    title: 'Biométrique',
     subtitle: 'Complétez toutes les étapes pour vérifier votre identité',
     progress: 'Progression de la vérification',
     overallStatus: 'Statut global',
@@ -713,18 +786,32 @@ export const fr = {
   permissions: {
     mediaLibrary: {
       title: 'Autorisation de la photothèque requise',
-      message: 'Nous avons besoin d’un accès à votre photothèque pour sélectionner une image du document.'
+      message: 'Nous avons besoin d\'un accès à votre photothèque pour sélectionner une image du document.'
     },
     camera: {
       title: 'Autorisation de la caméra requise',
-      message: 'Nous avons besoin d’un accès à votre caméra pour prendre des photos de vos documents et pour la détection de vivacité.'
+      message: 'Nous avons besoin d\'un accès à votre caméra pour prendre des photos de vos documents et pour la détection de vivacité.'
     },
     microphone: {
       title: 'Autorisation du microphone requise',
-      message: 'Nous avons besoin d’un accès à votre microphone pour enregistrer votre voix pour la vérification.'
+      message: 'Nous avons besoin d\'un accès à votre microphone pour enregistrer votre voix pour la vérification.'
     },
-    allowAccess: 'Autoriser l’accès',
+    allowAccess: 'Autoriser l\'accès',
     openSettings: 'Ouvrir les réglages'
+  },
+  errors: {
+    network: 'Erreur réseau. Veuillez vérifier votre connexion.',
+    server: 'Erreur serveur. Veuillez réessayer plus tard.',
+    fileUpload: 'Échec du téléchargement du fichier. Veuillez réessayer.',
+    audioRecording: 'Échec de l\'enregistrement audio. Veuillez vérifier les autorisations.',
+    cameraAccess: 'Accès à la caméra refusé. Veuillez activer les autorisations de la caméra.',
+    microphoneAccess: 'Accès au microphone refusé. Veuillez activer les autorisations du microphone.',
+    invalidFile: 'Format de fichier invalide.',
+    fileTooLarge: 'Le fichier est trop volumineux.',
+    sessionExpired: 'Session expirée. Veuillez vous reconnecter.',
+    userNotFound: 'Utilisateur non trouvé.',
+    invalidCredentials: 'Identifiants invalides.',
+    accountLocked: 'Compte temporairement verrouillé. Veuillez réessayer plus tard.'
   }
 };
 
