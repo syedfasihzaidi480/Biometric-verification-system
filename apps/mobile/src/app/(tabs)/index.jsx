@@ -30,12 +30,16 @@ import {
   FileText,
 } from 'lucide-react-native';
 import LanguageSelector from '@/components/LanguageSelector';
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
+import { authKey } from '@/utils/auth/store';
+import { loadPreferences } from '@/utils/preferences';
 
 const INPS_LOGO = require('../../../assets/images/icon.png');
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { isAuthenticated, signIn } = useAuth();
+  const { isAuthenticated, signIn, initiate } = useAuth();
   const { data: authUser } = useUser();
   const { t } = useTranslation();
   const { isDark, colors } = useTheme();
@@ -71,11 +75,66 @@ export default function HomeScreen() {
     router.push('/registration');
   };
 
-  const handleBiometric = () => {
+  const handleBiometric = async () => {
     if (isAuthenticated) {
       router.push('/(tabs)/verify');
     } else {
-      signIn();
+      // Try biometric login if enabled and credentials are stored
+      try {
+        const prefs = await loadPreferences();
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+        const storedAuth = await SecureStore.getItemAsync(authKey);
+
+        if (prefs.biometricLock && hasHardware && isEnrolled && storedAuth) {
+          // Biometric lock is enabled and credentials are stored
+          const result = await LocalAuthentication.authenticateAsync({
+            promptMessage: t('auth.unlockWithBiometrics', { defaultValue: 'Unlock with Face ID / Fingerprint' }),
+            fallbackLabel: t('auth.usePasscode', { defaultValue: 'Use Passcode' }),
+          });
+
+          if (result.success) {
+            // Biometric authentication successful, restore auth session from SecureStore
+            await initiate();
+            Alert.alert(
+              t('auth.biometricSuccess', { defaultValue: 'Success' }),
+              t('auth.biometricLoginSuccess', { defaultValue: 'Biometric authentication successful!' })
+            );
+            // Navigation will happen automatically when auth state updates
+          } else {
+            Alert.alert(
+              t('auth.biometricFailed', { defaultValue: 'Authentication Failed' }),
+              t('auth.biometricFailedMessage', { defaultValue: 'Biometric authentication was not successful. Please try again or sign in with your credentials.' })
+            );
+          }
+        } else {
+          // No biometric setup, show info and redirect to login
+          if (!hasHardware || !isEnrolled) {
+            Alert.alert(
+              t('auth.biometricUnavailable', { defaultValue: 'Biometric Unavailable' }),
+              t('auth.biometricUnavailableMessage', { defaultValue: 'Your device does not have biometric hardware or no biometrics are enrolled. Please sign in with your credentials.' })
+            );
+          } else if (!storedAuth) {
+            // No stored auth token - either biometric lock is disabled or user never signed in
+            const message = prefs.biometricLock 
+              ? t('auth.biometricNeedsSignIn', { defaultValue: 'Please sign in once with your credentials to enable biometric login.' })
+              : t('auth.biometricNotSetupMessage', { defaultValue: 'Please sign in first and enable Biometric Lock in Settings to use biometric login.' });
+            
+            Alert.alert(
+              t('auth.biometricNotSetup', { defaultValue: 'Biometric Login Not Setup' }),
+              message
+            );
+          }
+          signIn();
+        }
+      } catch (error) {
+        console.error('Biometric authentication error:', error);
+        Alert.alert(
+          t('common.error', { defaultValue: 'Error' }),
+          t('auth.biometricError', { defaultValue: 'An error occurred during biometric authentication. Please sign in normally.' })
+        );
+        signIn();
+      }
     }
   };
 

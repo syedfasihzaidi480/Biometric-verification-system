@@ -13,8 +13,8 @@ export default function Index() {
 
   const checkOnboardingStatus = async () => {
     try {
-      // TEMPORARY: Uncomment the line below to reset onboarding and see it again
-      await resetOnboarding();
+      // FOR TESTING ONLY: Uncomment the line below to reset onboarding and see it again
+      // await resetOnboarding();
       
       const hasSeen = await hasSeenOnboarding();
       console.log("Has seen onboarding:", hasSeen);

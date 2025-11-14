@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
+import { loadPreferences } from '../preferences';
 
 export const authKey = `${process.env.EXPO_PUBLIC_PROJECT_GROUP_ID}-jwt`;
 
@@ -9,13 +10,21 @@ export const authKey = `${process.env.EXPO_PUBLIC_PROJECT_GROUP_ID}-jwt`;
 export const useAuthStore = create((set) => ({
   isReady: false,
   auth: null,
-  setAuth: (auth) => {
+  setAuth: async (auth) => {
     if (auth) {
-      SecureStore.setItemAsync(authKey, JSON.stringify(auth));
+      await SecureStore.setItemAsync(authKey, JSON.stringify(auth));
+      set({ auth });
     } else {
-      SecureStore.deleteItemAsync(authKey);
+      // When signing out, check if biometric lock is enabled
+      // If enabled, keep the token in SecureStore for biometric re-authentication
+      // If disabled, delete the token
+      const prefs = await loadPreferences();
+      if (!prefs.biometricLock) {
+        await SecureStore.deleteItemAsync(authKey);
+      }
+      // Clear in-memory auth state regardless
+      set({ auth: null });
     }
-    set({ auth });
   },
 }));
 

@@ -43,10 +43,10 @@ export const useAuth = () => {
     }
   }, [open]);
 
-  const signOut = useCallback(() => {
-    setAuth(null);
+  const signOut = useCallback(async () => {
+    await setAuth(null);
     close();
-  }, [close]);
+  }, [close, setAuth]);
 
   return {
     isReady,
