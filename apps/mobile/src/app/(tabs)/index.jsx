@@ -30,6 +30,7 @@ import {
   FileText,
 } from 'lucide-react-native';
 import LanguageSelector from '@/components/LanguageSelector';
+import StandaloneVoiceLoginModal from '@/components/StandaloneVoiceLoginModal';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { authKey } from '@/utils/auth/store';
@@ -39,12 +40,13 @@ const INPS_LOGO = require('../../../assets/images/icon.png');
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { isAuthenticated, signIn, initiate } = useAuth();
+  const { isAuthenticated, signIn, initiate, setAuth } = useAuth();
   const { data: authUser } = useUser();
   const { t } = useTranslation();
   const { isDark, colors } = useTheme();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showVoiceLoginModal, setShowVoiceLoginModal] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -160,6 +162,51 @@ export default function HomeScreen() {
     }
   };
 
+  const handleVoiceLogin = () => {
+    setShowVoiceLoginModal(true);
+  };
+
+  const handleVoiceLoginSuccess = async (userData) => {
+    try {
+      // Create auth session from voice-verified user data
+      const authData = {
+        user: {
+          id: userData.auth_user_id || userData.id,
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone,
+        },
+        session: {
+          expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+        },
+      };
+
+      await setAuth(authData);
+      
+      Alert.alert(
+        t('voiceLogin.authSuccess', { defaultValue: 'Success!' }),
+        t('voiceLogin.authSuccessMessage', { defaultValue: 'Voice authentication successful!' }),
+        [
+          {
+            text: t('common.ok', { defaultValue: 'OK' }),
+            onPress: () => {
+              setShowVoiceLoginModal(false);
+              // User will now see the authenticated home screen
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Voice login session error:', error);
+      Alert.alert(
+        t('common.error', { defaultValue: 'Error' }),
+        t('errors.sessionCreate', { 
+          defaultValue: 'Failed to create session. Please try again.' 
+        })
+      );
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <View style={[styles.container, { paddingTop: insets.top, backgroundColor: colors.background }]}> 
@@ -191,6 +238,14 @@ export default function HomeScreen() {
             <Text style={styles.secondaryButtonText}>{t('registration.createAccount')}</Text>
           </TouchableOpacity>
 
+          {/* Voice Login Button */}
+          <TouchableOpacity style={styles.voiceLoginButton} onPress={handleVoiceLogin}>
+            <Mic size={20} color="#007AFF" />
+            <Text style={styles.voiceLoginButtonText}>
+              {t('auth.signInWithVoice', { defaultValue: 'Or sign in with Voice' })}
+            </Text>
+          </TouchableOpacity>
+
           <View style={styles.quickActionRow}>
             <TouchableOpacity style={styles.quickAction} onPress={handleBiometric}>
               <View style={styles.quickActionIcon}>
@@ -216,6 +271,13 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </ScrollView>
+
+        {/* Voice Login Modal */}
+        <StandaloneVoiceLoginModal
+          visible={showVoiceLoginModal}
+          onClose={() => setShowVoiceLoginModal(false)}
+          onSuccess={handleVoiceLoginSuccess}
+        />
       </View>
     );
   }
@@ -555,12 +617,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#007AFF',
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 12,
   },
   secondaryButtonText: {
     color: '#007AFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  voiceLoginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    marginBottom: 32,
+    gap: 8,
+  },
+  voiceLoginButtonText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#007AFF',
   },
   quickActionRow: {
     flexDirection: 'row',

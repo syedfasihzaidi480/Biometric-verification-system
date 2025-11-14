@@ -7,6 +7,7 @@ export const en = {
     pleaseSignIn: 'Please sign in to continue',
     pleaseSignInToViewProfile: 'You need to sign in to view your profile',
     pleaseSignInToRegister: 'You need to sign in to complete profile registration',
+    signInWithVoice: 'Or sign in with Voice',
     unlockWithBiometrics: 'Unlock with Face ID / Fingerprint',
     usePasscode: 'Use Passcode',
     biometricSuccess: 'Success',
@@ -86,7 +87,8 @@ export const en = {
     next: 'Next',
     previous: 'Previous',
     submit: 'Submit',
-    tryAgain: 'Try Again'
+    tryAgain: 'Try Again',
+    usePassword: 'Use Password Instead'
   },
   login: {
     welcomeBack: 'Welcome Back',
@@ -117,7 +119,10 @@ export const en = {
     incorrectCredentials: 'The credentials you entered are incorrect. If you don\'t have an account, please register first.',
     termsAgreement: 'By signing in, you agree to our Terms of Service and Privacy Policy',
     noAccount: 'Don\'t have an account?',
-    register: 'Register'
+    register: 'Register',
+    useVoiceLogin: 'Or sign in with Voice',
+    voiceLoginSuccess: 'Voice authentication successful!',
+    voiceAuthSessionFailed: 'Failed to establish session after voice authentication.'
   },
   onboarding: {
     welcome: 'Welcome to Voice Biometrics',
@@ -213,12 +218,32 @@ export const en = {
     enrolledMessage: 'Your voice has been successfully enrolled'
   },
   voiceLogin: {
-    title: 'Voice Verification',
+    title: 'Voice Login',
     subtitle: 'Verify your identity with your voice',
     instructions: 'Please say the following phrase:',
     loginScript: 'My voice is my passport. Verify my identity now.',
-  enrollNow: 'Enroll Now',
-  enrollmentRequiredTitle: 'Voice Enrollment Required',
+    question1: 'What is your full name?',
+    question2: 'What is your date of birth?',
+    question1Instructions: 'Please say your full name clearly as it appears on your ID.',
+    question2Instructions: 'Please say your date of birth in the format: Month, Day, Year.',
+    questionLabel: 'Question {{number}} of {{total}}',
+    processing: 'Processing...',
+    recording: 'Recording... Tap to stop',
+    tapToRecord: 'Tap to record',
+    question1Success: 'Great!',
+    question1NextStep: 'First question verified. Now please answer the second question.',
+    authSuccess: 'Success!',
+    authSuccessMessage: 'Voice authentication successful!',
+    authFailed: 'Authentication Failed',
+    verificationFailed: 'Voice verification failed. Please try again.',
+    maxAttemptsReached: 'Maximum attempts reached. Please use password login.',
+    identifierRequired: 'Required',
+    enterIdentifier: 'Please enter your email or phone number to continue.',
+    identifierRequiredMessage: 'Please enter your email or phone number first to use voice login.',
+    enterIdentifierTitle: 'Sign in with Voice',
+    enterIdentifierInstructions: 'Enter your email or phone number to begin voice authentication.',
+    enrollNow: 'Enroll Now',
+    enrollmentRequiredTitle: 'Voice Enrollment Required',
   enrollmentRequiredMessage: 'You need to enroll your voice before you can verify. Would you like to enroll now?',
     startVerification: 'Start Verification',
     verifying: 'Verifying your voice...',
@@ -227,9 +252,10 @@ export const en = {
     attemptsLeft: '{{attempts}} attempts remaining',
     tapToStart: 'Tap to start verification',
     tapToStop: 'Tap to stop and verify',
-    maxAttemptsReached: 'Maximum attempts reached',
     verifiedProceed: 'Your identity has been verified. You can now proceed.',
-    recordFirst: 'Please record your voice first'
+    recordFirst: 'Please record your voice first',
+    playing: 'Playing...',
+    playRecording: 'Play Recording'
   },
   liveness: {
     title: 'Liveness Check',
@@ -431,6 +457,7 @@ export const en = {
     fileTooLarge: 'File is too large.',
     sessionExpired: 'Session expired. Please log in again.',
     userNotFound: 'User not found.',
+    sessionCreate: 'Failed to create session. Please try again.',
     invalidCredentials: 'Invalid credentials.',
     accountLocked: 'Account temporarily locked. Please try again later.'
   },
@@ -571,7 +598,10 @@ export const fr = {
     incorrectCredentials: 'Les identifiants que vous avez entrés sont incorrects. Si vous n\'avez pas de compte, veuillez vous inscrire d\'abord.',
     termsAgreement: 'En vous connectant, vous acceptez nos Conditions d\'utilisation et notre Politique de confidentialité',
     noAccount: 'Vous n\'avez pas de compte ?',
-    register: 'S\'inscrire'
+    register: 'S\'inscrire',
+    useVoiceLogin: 'Ou connectez-vous avec la voix',
+    voiceLoginSuccess: 'Authentification vocale réussie !',
+    voiceAuthSessionFailed: "Échec de l'établissement de la session après l'authentification vocale."
   },
   onboarding: {
     welcome: 'Bienvenue dans Voice Biometrics',
@@ -752,10 +782,27 @@ export const fr = {
     cancel: 'Annuler'
   },
   voiceLogin: {
-    title: 'Vérification vocale',
+    title: 'Connexion vocale',
     subtitle: 'Vérifiez votre identité avec votre voix',
     instructions: 'Veuillez dire la phrase suivante :',
     loginScript: 'Ma voix est mon passeport. Vérifiez mon identité maintenant.',
+    question1: 'Quel est votre nom complet ?',
+    question2: 'Quelle est votre date de naissance ?',
+    question1Instructions: "Veuillez dire votre nom complet clairement comme il apparaît sur votre pièce d'identité.",
+    question2Instructions: 'Veuillez dire votre date de naissance au format : Mois, Jour, Année.',
+    questionLabel: 'Question {{number}} sur {{total}}',
+    processing: 'Traitement...',
+    recording: 'Enregistrement... Appuyez pour arrêter',
+    tapToRecord: 'Appuyez pour enregistrer',
+    question1Success: 'Super !',
+    question1NextStep: 'Première question vérifiée. Maintenant, veuillez répondre à la deuxième question.',
+    authSuccess: 'Succès !',
+    authSuccessMessage: 'Authentification vocale réussie !',
+    authFailed: 'Échec de l\'authentification',
+    verificationFailed: 'La vérification vocale a échoué. Veuillez réessayer.',
+    maxAttemptsReached: 'Nombre maximal de tentatives atteint. Veuillez utiliser la connexion par mot de passe.',
+    identifierRequired: 'Identifiant requis',
+    identifierRequiredMessage: 'Veuillez d\'abord entrer votre email ou numéro de téléphone pour utiliser la connexion vocale.',
     startVerification: 'Démarrer la vérification',
     verifying: 'Vérification de votre voix...',
     verificationSuccess: 'Voix vérifiée avec succès !',

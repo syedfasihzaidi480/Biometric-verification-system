@@ -13,10 +13,11 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { ArrowLeft, Mail, Phone } from "lucide-react-native";
+import { ArrowLeft, Mail, Phone, Mic } from "lucide-react-native";
 import { useTranslation } from "@/i18n/useTranslation";
 import PhoneNumberInput from "@/components/PhoneNumberInput";
 import PasswordPhoneInput from "@/components/PasswordPhoneInput";
+import VoiceLoginModal from "@/components/VoiceLoginModal";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -31,6 +32,7 @@ export default function LoginScreen() {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [isLoginPhoneValid, setIsLoginPhoneValid] = useState(false);
+  const [showVoiceLogin, setShowVoiceLogin] = useState(false);
 
   const validateForm = () => {
     const newErrors = {};
@@ -129,6 +131,66 @@ export default function LoginScreen() {
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
+  };
+
+  const handleVoiceLoginSuccess = async (userData) => {
+    // Voice authentication successful, sign in the user
+    try {
+      const { signInWithCredentials } = await import("@/utils/auth/credentials");
+      
+      // Use the auth_user_id from voice auth to establish session
+      const result = await signInWithCredentials({
+        identifier: userData.email || userData.phone,
+        email: userData.email,
+        phone: userData.phone,
+        voiceAuthenticated: true,
+        userId: userData.auth_user_id,
+        callbackUrl: "/(tabs)",
+      });
+
+      if (result.ok && result.session) {
+        Alert.alert(
+          t("common.success", { defaultValue: "Success" }),
+          t("login.voiceLoginSuccess", { defaultValue: "Voice authentication successful!" }),
+          [
+            {
+              text: t("common.ok", { defaultValue: "OK" }),
+              onPress: () => router.replace("/(tabs)"),
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          t("login.signInFailed", { defaultValue: "Sign In Failed" }),
+          t("login.voiceAuthSessionFailed", { defaultValue: "Failed to establish session after voice authentication." })
+        );
+      }
+    } catch (error) {
+      console.error("Voice login session error:", error);
+      Alert.alert(
+        t("common.error", { defaultValue: "Error" }),
+        t("errors.network", { defaultValue: "Network error. Please try again." })
+      );
+    }
+  };
+
+  const handleVoiceLoginPress = () => {
+    // Get identifier (email or phone) from form
+    const identifier = authMode === "email" 
+      ? formData.email.trim() 
+      : formData.loginPhone.trim();
+
+    if (!identifier) {
+      Alert.alert(
+        t("voiceLogin.identifierRequired", { defaultValue: "Identifier Required" }),
+        t("voiceLogin.identifierRequiredMessage", { 
+          defaultValue: "Please enter your email or phone number first to use voice login." 
+        })
+      );
+      return;
+    }
+
+    setShowVoiceLogin(true);
   };
 
   return (
@@ -256,6 +318,18 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
 
+          {/* Voice Login Option */}
+          <TouchableOpacity
+            style={styles.voiceLoginButton}
+            onPress={handleVoiceLoginPress}
+            disabled={isLoading}
+          >
+            <Mic size={20} color="#007AFF" />
+            <Text style={styles.voiceLoginButtonText}>
+              {t("login.useVoiceLogin", { defaultValue: "Or sign in with Voice" })}
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.registerLink}
             onPress={() => router.push("/registration")}
@@ -266,6 +340,14 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Voice Login Modal */}
+        <VoiceLoginModal
+          visible={showVoiceLogin}
+          onClose={() => setShowVoiceLogin(false)}
+          identifier={authMode === "email" ? formData.email.trim() : formData.loginPhone.trim()}
+          onSuccess={handleVoiceLoginSuccess}
+        />
       </View>
     </KeyboardAvoidingView>
   );
@@ -430,6 +512,19 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+  },
+  voiceLoginButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    marginTop: 12,
+    gap: 8,
+  },
+  voiceLoginButtonText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#007AFF",
   },
   registerLink: {
     alignItems: "center",
