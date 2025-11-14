@@ -428,3 +428,10 @@ function getIpAddress(request) {
 }
 
 function cleanupBase64(value) {
+  if (!value) return value;
+  if (value.startsWith('data:')) {
+    const parts = value.split(',');
+    return parts.length > 1 ? parts[1] : value;
+  }
+  return value.replace(/\s/g, '');
+}
