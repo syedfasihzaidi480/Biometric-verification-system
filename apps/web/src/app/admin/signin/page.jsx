@@ -78,7 +78,7 @@ export default function AdminSignInPage() {
       };
 
       if (csrfToken) addField("csrfToken", csrfToken);
-      addField("email", email);
+      addField("identifier", email);  // Auth.js expects "identifier" not "email"
       addField("password", password);
       addField("callbackUrl", "/admin");
 

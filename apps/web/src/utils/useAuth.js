@@ -18,7 +18,7 @@ function useAuth() {
     
     // Call Auth.js callback endpoint (POST form data)
     const formData = new URLSearchParams();
-    formData.append('email', email);
+    formData.append('identifier', email);  // Auth.js expects "identifier" not "email"
     formData.append('password', password);
     formData.append('callbackUrl', finalCallbackUrl);
     
